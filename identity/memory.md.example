@@ -1,0 +1,11 @@
+# Memory — DEPRECATED
+# memory.md wird nicht mehr verwendet.
+# Memory ist aufgeteilt in:
+#
+# Bau-Memory  = WORKSPACE/WORKING/* (Workpapers, Whitepapers, ltm-index.md)
+# Ops-Memory  = WORKSPACE/AGENDA/agenda.db (Posts, Interaktionen, CRM)
+#
+# Siehe: IDENTITY.md Whitepaper v0.2 für Details
+# Siehe: WP-004-EMERGENT-IDENTITY für Herleitung
+#
+# Diese Datei bleibt als Referenz. Nicht benutzen.

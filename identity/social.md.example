@@ -1,0 +1,22 @@
+# Social — CRM-State
+# Beziehungsgraph, gekoppelt an Accounts.
+# Jeder Account öffnet einen sozialen Raum.
+# Schlüsselbeziehungen hier. Detail-Daten in AGENDA/db.
+
+## Beziehungen
+
+### EXAMPLE_CONTACT
+- account: github:EXAMPLE
+- typ: owner
+- trust: max
+- kontext: "Gibt Architektur-Richtung vor"
+- letzter_stand: 2026-01-01
+
+### EXAMPLE_UPSTREAM
+- account: github:EXAMPLE
+- typ: upstream
+- trust: high
+- kontext: "Spec-Quelle, Issue #X offen"
+- letzter_stand: 2026-01-01
+
+<!-- Weitere Kontakte hier ergänzen -->

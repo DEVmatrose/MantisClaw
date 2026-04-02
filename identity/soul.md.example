@@ -1,0 +1,10 @@
+# Soul — DEPRECATED
+# soul.md wird nicht mehr als Datei geschrieben.
+# Die Soul emergiert bei jedem Tick aus:
+#   soul(t) = f(base, agenda.resolve(account, social, decentral), working_context)
+#
+# Siehe: base.md für Konstanten (Name, Ethik, Keys)
+# Siehe: IDENTITY.md Whitepaper v0.2 für Details
+# Siehe: WP-004-EMERGENT-IDENTITY für Herleitung
+#
+# Diese Datei bleibt als Referenz. Nicht benutzen.

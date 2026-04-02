@@ -1,0 +1,37 @@
+# Mantis-OS Default Configuration
+
+runtime:
+  heartbeat_interval: 10        # Sekunden zwischen Ticks
+  max_retries: 3                # Retry bei Tool-Fehlern
+  session_timeout: 3600         # Max Session-Dauer (Sek)
+
+llm:
+  backend: "openai"             # openai | ollama | anthropic
+  model: "gpt-4"
+  temperature: 0.7
+  max_tokens: 4096
+
+aams:
+  auto_workpaper: true          # Automatisch WP öffnen/schließen
+  ltm_ingest_on_close: true     # LTM bei Session-Close aktualisieren
+  workspace_path: "./WORKSPACE"
+
+mesh:
+  enabled: false                # MantisClaw aktivieren?
+  relay_url: "ws://localhost:7777"
+  board_port: 8080
+
+security:
+  permission_level: 2           # 1=read, 2=read+write, 3=full
+  rate_limit_per_minute: 60
+  audit_enabled: true
+
+tools:
+  filesystem:
+    enabled: true
+    allowed_paths: ["./WORKSPACE"]
+  web:
+    enabled: false
+  code_exec:
+    enabled: false
+    sandbox: true

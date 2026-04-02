@@ -1,0 +1,21 @@
+# Decentral — Trust-Map
+# Vertrauen zu Infrastruktur-Knoten.
+# Keys leben in base.md. Hier lebt die BEWERTUNG der Außenwelt.
+
+## Knoten
+
+### relay:wss://nos.lol
+- typ: nostr-relay
+- trust: high
+- grund: "uptime 99%, schnell, zuverlässig"
+- seit: 2025-01-01
+- fallback: relay:wss://relay.damus.io
+
+### node:github.com
+- typ: git-host
+- trust: high
+- grund: "Standard, aber zentralisiert"
+- seit: 2024-01-01
+- fallback: codeberg.org
+
+<!-- Weitere Knoten hier ergänzen -->

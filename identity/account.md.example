@@ -1,0 +1,23 @@
+# Account — Fähigkeits-Register
+# Alle Accounts die der Agent über seine Lebenszeit anlegt.
+# Wächst. Jeder Account impliziert Plattform-Verhalten.
+
+## Accounts
+
+### github:EXAMPLE
+- typ: API (token)
+- angelegt: 2026-01-01
+- zugriff: API + Browser
+- credential: → .env:GITHUB_TOKEN
+- status: aktiv
+- plattform_normen: "technisch, Issues, PRs, Markdown"
+
+### nostr:EXAMPLE
+- typ: Keys (nsec → .env)
+- angelegt: 2026-01-01
+- zugriff: Relay-Protokoll
+- credential: → .env:NOSTR_NSEC
+- status: aktiv
+- plattform_normen: "kurz, dezentral, Kind-basiert"
+
+<!-- Weitere Accounts hier ergänzen -->
