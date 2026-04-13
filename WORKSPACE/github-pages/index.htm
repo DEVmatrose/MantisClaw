@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,6 +36,23 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
     pointer-events: none; z-index: 0; opacity: .6;
   }
+
+  /* LANG SWITCHER */
+  .lang-switch {
+    position: fixed; top: 16px; right: 20px; z-index: 100;
+    display: flex; gap: 2px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 3px; overflow: hidden;
+  }
+  .lang-btn {
+    font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .08em;
+    padding: 6px 12px; background: transparent; color: var(--muted); border: none;
+    cursor: pointer; transition: all .2s; text-transform: uppercase;
+  }
+  .lang-btn.active { background: var(--green); color: #07090d; font-weight: 700; }
+  .lang-btn:hover:not(.active) { color: var(--green); background: var(--green-glow); }
+
+  /* i18n: hide non-active languages, show keeps natural display */
+  [data-i]:not(.show) { display: none !important; }
 
   /* HERO */
   .hero {
@@ -182,6 +199,7 @@
   .lb-green { background: rgba(74,250,110,.12); color: var(--green); border: 1px solid var(--green-dim); }
   .lb-teal  { background: rgba(0,212,170,.12);  color: var(--teal);  border: 1px solid #004a3a; }
   .lb-amber { background: rgba(245,166,35,.12); color: var(--amber); border: 1px solid #6a4200; }
+  .lb-rose  { background: rgba(255,107,138,.12); color: var(--rose); border: 1px solid #6a2030; }
   .lb-gray  { background: rgba(255,255,255,.05); color: #777; border: 1px solid #252525; }
   .loop-text { font-size: 13px; color: var(--text); padding-top: 2px; line-height: 1.5; }
   .loop-text small { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; font-family: 'Space Mono', monospace; }
@@ -198,7 +216,7 @@
   .dot { width: 10px; height: 10px; border-radius: 50%; }
   .dr { background: #ff5f57; } .dy { background: #febc2e; } .dg { background: #28c840; }
   .code-filename { font-size: 10px; color: var(--muted); letter-spacing: .1em; margin-left: 4px; }
-  .code-body { padding: 20px 24px; }
+  .code-body { padding: 20px 24px; white-space: pre-wrap; }
   .kw { color: #ff79c6; } .fn { color: #50fa7b; } .var { color: #8be9fd; }
   .str { color: #f1fa8c; } .cmt { color: var(--muted); font-style: italic; }
 
@@ -236,6 +254,7 @@
   .dash-item { font-size: 12px; color: var(--text); padding: 5px 0; border-bottom: 1px solid var(--border); }
   .dash-item:last-child { border: none; }
   .dash-chat { background: var(--code-bg); border-radius: 4px; padding: 14px; font-family: 'Space Mono', monospace; font-size: 10.5px; color: var(--muted); line-height: 1.8; }
+  .dash-bubble { margin: 4px 0; }
   .dash-bubble.agent { color: var(--green); }
 
   /* MANTIS-OS */
@@ -276,28 +295,43 @@
 </head>
 <body>
 
-<!-- HERO -->
+<!-- LANGUAGE SWITCHER -->
+<div class="lang-switch">
+  <button class="lang-btn" data-l="en" onclick="setLang('en')">EN</button>
+  <button class="lang-btn" data-l="de" onclick="setLang('de')">DE</button>
+  <button class="lang-btn" data-l="cn" onclick="setLang('cn')">中文</button>
+</div>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
 <div class="hero">
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-inner">
     <div class="badge-row">
       <span class="badge">v0.1.0</span>
-      <span class="badge amber">In Entwicklung</span>
-      <span class="badge teal">MIT Lizenz</span>
-      <span class="badge">Teil der Mantis-Familie</span>
+      <span class="badge amber" data-i="en">In Development</span>
+      <span class="badge amber" data-i="de">In Entwicklung</span>
+      <span class="badge amber" data-i="cn">开发中</span>
+      <span class="badge teal">MIT License</span>
+      <span class="badge" data-i="en">Mantis Family</span>
+      <span class="badge" data-i="de">Mantis-Familie</span>
+      <span class="badge" data-i="cn">Mantis 家族</span>
       <span class="badge">AAMS v1.3.0</span>
     </div>
     <h1>Mantis<span>Claw</span></h1>
-    <p class="tagline">Autonomous Agent Loop Framework — local-first, emergent identity</p>
+    <p class="tagline" data-i="en">Autonomous Agent Loop Framework — local-first, emergent identity</p>
+    <p class="tagline" data-i="de">Autonomes Agenten-Loop-Framework — local-first, emergente Identität</p>
+    <p class="tagline" data-i="cn">自主代理循环框架 — 本地优先，涌现身份</p>
     <div class="soul-formula">
       soul(t) = <span style="color:#00d4aa">f</span>(<span style="color:#8be9fd">base</span>, agenda.<span style="color:#50fa7b">resolve</span>(<span style="color:#f1fa8c">account</span>, <span style="color:#f1fa8c">social</span>, <span style="color:#f1fa8c">decentral</span>), <span style="color:#8be9fd">working_context</span>)
-      <span class="soul-label">Emergente Soul-Berechnung — nie geschrieben, bei jedem Tick neu berechnet</span>
+      <span class="soul-label" data-i="en">Emergent soul computation — never written, recalculated every tick</span>
+      <span class="soul-label" data-i="de">Emergente Soul-Berechnung — nie geschrieben, bei jedem Tick neu berechnet</span>
+      <span class="soul-label" data-i="cn">涌现灵魂计算 — 从不写入，每次心跳重新计算</span>
     </div>
     <div class="cta-row">
       <a href="https://github.com/DEVmatrose/MantisClaw" class="btn btn-primary">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-        GitHub öffnen
+        GitHub
       </a>
       <a href="https://github.com/DEVmatrose/AAMS" class="btn btn-ghost">AAMS Standard</a>
       <a href="https://github.com/DEVmatrose/Mantis-OS" class="btn btn-ghost">Mantis-OS</a>
@@ -305,14 +339,18 @@
   </div>
 </div>
 
-<!-- ARCHITEKTUR -->
+<!-- ═══════════════════ ARCHITECTURE ═══════════════════ -->
 <section class="reveal">
-  <div class="section-label">// Architektur</div>
-  <h2>Drei Schichten. Ein Bewusstsein.</h2>
+  <div class="section-label">// Architecture</div>
+  <h2 data-i="en">Three Layers. One Consciousness.</h2>
+  <h2 data-i="de">Drei Schichten. Ein Bewusstsein.</h2>
+  <h2 data-i="cn">三层架构，一个意识。</h2>
   <div class="arch-grid">
     <div class="arch-card c1">
       <div class="arch-title">core/</div>
-      <div class="arch-sub">Gehirn &amp; Loop — L3</div>
+      <div class="arch-sub" data-i="en">Brain &amp; Loop — L3</div>
+      <div class="arch-sub" data-i="de">Gehirn &amp; Loop — L3</div>
+      <div class="arch-sub" data-i="cn">大脑 &amp; 循环 — L3</div>
       <ul class="arch-files">
         <li>runtime.py</li>
         <li>planner.py</li>
@@ -327,7 +365,9 @@
     </div>
     <div class="arch-card c2">
       <div class="arch-title">identity/</div>
-      <div class="arch-sub">Emergente Identität — L1</div>
+      <div class="arch-sub" data-i="en">Emergent Identity — L1</div>
+      <div class="arch-sub" data-i="de">Emergente Identität — L1</div>
+      <div class="arch-sub" data-i="cn">涌现身份 — L1</div>
       <ul class="arch-files">
         <li>base.md</li>
         <li>agenda.md</li>
@@ -355,10 +395,12 @@
 
 <div class="divider"></div>
 
-<!-- SCHICHTENMODELL -->
+<!-- ═══════════════════ LAYER MODEL ═══════════════════ -->
 <section class="reveal">
-  <div class="section-label">// Schichtenmodell</div>
-  <h2>L0 – L5: Jede Schicht hat eine Aufgabe.</h2>
+  <div class="section-label">// Layer Model</div>
+  <h2 data-i="en">L0 – L5: Each Layer Has a Purpose.</h2>
+  <h2 data-i="de">L0 – L5: Jede Schicht hat eine Aufgabe.</h2>
+  <h2 data-i="cn">L0 – L5：每层各司其职。</h2>
   <div class="layers-grid">
     <div class="layer-card l0">
       <div class="layer-num">L0</div>
@@ -368,12 +410,14 @@
     <div class="layer-card l1">
       <div class="layer-num">L1</div>
       <div class="layer-name">Identity</div>
-      <div class="layer-desc">identity/<br>soul(t) Berechnung</div>
+      <div class="layer-desc">identity/<br>soul(t)</div>
     </div>
     <div class="layer-card l2">
       <div class="layer-num">L2</div>
       <div class="layer-name">AAMS Body</div>
-      <div class="layer-desc">WORKING/<br>passiv — nur über Tools</div>
+      <div class="layer-desc" data-i="en">WORKING/<br>passive — tools only</div>
+      <div class="layer-desc" data-i="de">WORKING/<br>passiv — nur über Tools</div>
+      <div class="layer-desc" data-i="cn">WORKING/<br>被动 — 仅通过工具</div>
     </div>
     <div class="layer-card l3">
       <div class="layer-num">L3</div>
@@ -388,176 +432,256 @@
     <div class="layer-card l5">
       <div class="layer-num">L5</div>
       <div class="layer-name">Security</div>
-      <div class="layer-desc">Querschnitt<br>Security-Level pro Tool</div>
+      <div class="layer-desc" data-i="en">Cross-cutting<br>Security level per tool</div>
+      <div class="layer-desc" data-i="de">Querschnitt<br>Security-Level pro Tool</div>
+      <div class="layer-desc" data-i="cn">横切关注<br>每个工具的安全级别</div>
     </div>
   </div>
   <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-top:16px;padding:12px 16px;border-left:2px solid var(--border);">
-    Kernregel: L3 (Loop) berührt L2 (Körper) <strong style="color:var(--text)">nie direkt</strong> — jeder Zugriff auf WORKING/ läuft über ein registriertes Tool in L4.
+    <span data-i="en">Core rule: L3 (Loop) <strong style="color:var(--text)">never touches</strong> L2 (Body) directly — all access to WORKING/ goes through a registered Tool in L4.</span>
+    <span data-i="de">Kernregel: L3 (Loop) berührt L2 (Körper) <strong style="color:var(--text)">nie direkt</strong> — jeder Zugriff auf WORKING/ läuft über ein registriertes Tool in L4.</span>
+    <span data-i="cn">核心规则：L3（循环）<strong style="color:var(--text)">从不直接</strong>访问 L2（主体）— 所有对 WORKING/ 的访问都通过 L4 中已注册的工具。</span>
   </p>
 </section>
 
 <div class="divider"></div>
 
-<!-- DER LOOP -->
+<!-- ═══════════════════ THE LOOP ═══════════════════ -->
 <section class="reveal">
-  <div class="section-label">// Der Loop</div>
-  <h2>tick() — Das Herzstück</h2>
+  <div class="section-label">// The Loop</div>
+  <h2 data-i="en">tick() — The Heartbeat</h2>
+  <h2 data-i="de">tick() — Das Herzstück</h2>
+  <h2 data-i="cn">tick() — 心跳核心</h2>
   <div class="loop-wrap">
     <div class="loop-steps">
       <div class="loop-step">
         <span class="loop-badge lb-teal">L1</span>
-        <span class="loop-text">Identity &amp; Soul berechnen
-          <small>compute_soul(base, agenda, accounts, social, decentral)</small></span>
+        <div class="loop-text">
+          <span data-i="en">Compute Identity &amp; Soul<small>soul(t) = f(base, agenda, ctx)</small></span>
+          <span data-i="de">Identität &amp; Soul berechnen<small>soul(t) = f(base, agenda, ctx)</small></span>
+          <span data-i="cn">计算身份与灵魂<small>soul(t) = f(base, agenda, ctx)</small></span>
+        </div>
       </div>
       <div class="loop-step">
         <span class="loop-badge lb-amber">L4</span>
-        <span class="loop-text">JIT Context Loading (3-Stage)
-          <small>always ~3k · agenda ~8k · query on-demand ~5k</small></span>
+        <div class="loop-text">
+          <span data-i="en">Load Context (JIT)<small>workpapers · memory · project</small></span>
+          <span data-i="de">Kontext laden (JIT)<small>Workpapers · Memory · Projekt</small></span>
+          <span data-i="cn">加载上下文（JIT）<small>工作文档 · 记忆 · 项目</small></span>
+        </div>
       </div>
       <div class="loop-step">
-        <span class="loop-badge lb-green">L3</span>
-        <span class="loop-text">Planen
-          <small>planner(soul_t, hooks, memory, guidelines)</small></span>
+        <span class="loop-badge lb-green">Plan</span>
+        <div class="loop-text">
+          <span data-i="en">Planner generates plan<small>GOAL → REASONING → STEP 1..N</small></span>
+          <span data-i="de">Planner erzeugt Plan<small>GOAL → REASONING → STEP 1..N</small></span>
+          <span data-i="cn">规划器生成计划<small>GOAL → REASONING → STEP 1..N</small></span>
+        </div>
       </div>
       <div class="loop-step">
-        <span class="loop-badge lb-green">L3</span>
-        <span class="loop-text">Handeln — Tool oder Skill
-          <small>executor(plan) · skill_executor(plan.skill, context)</small></span>
+        <span class="loop-badge lb-green">Execute</span>
+        <div class="loop-text">
+          <span data-i="en">Executor runs steps<small>Each step → tool call via Registry</small></span>
+          <span data-i="de">Executor führt Steps aus<small>Jeder Step → Tool-Call via Registry</small></span>
+          <span data-i="cn">执行器运行步骤<small>每步 → 通过注册表调用工具</small></span>
+        </div>
       </div>
       <div class="loop-step">
-        <span class="loop-badge lb-green">L3</span>
-        <span class="loop-text">Beobachten
-          <small>observer(results, diary, guidelines)</small></span>
+        <span class="loop-badge lb-amber">Observe</span>
+        <div class="loop-text">
+          <span data-i="en">Observer evaluates results<small>ok / fail / anomalies → history</small></span>
+          <span data-i="de">Observer bewertet Ergebnisse<small>ok / fail / Anomalien → History</small></span>
+          <span data-i="cn">观察器评估结果<small>成功 / 失败 / 异常 → 历史</small></span>
+        </div>
       </div>
       <div class="loop-step">
-        <span class="loop-badge lb-gray">RFL</span>
-        <span class="loop-text">Reflexion &amp; Revision
-          <small>reflect(assessment) → planner.revise() → zweiter Versuch</small></span>
+        <span class="loop-badge lb-rose">Reflect</span>
+        <div class="loop-text">
+          <span data-i="en">Reflection Loop (RFL)<small>Self-evaluation → guidelines → improve</small></span>
+          <span data-i="de">Reflection Loop (RFL)<small>Selbstbewertung → Guidelines → verbessern</small></span>
+          <span data-i="cn">反思循环（RFL）<small>自我评估 → 指南 → 改进</small></span>
+        </div>
       </div>
       <div class="loop-step">
-        <span class="loop-badge lb-amber">L2</span>
-        <span class="loop-text">LTM &amp; Guidelines aktualisieren
-          <small>observer.extract_lessons() → GUIDELINES/ · ltm_update()</small></span>
+        <span class="loop-badge lb-gray">Sleep</span>
+        <div class="loop-text">
+          <span data-i="en">Heartbeat wait (60s)<small>Idle detection after 3 identical plans</small></span>
+          <span data-i="de">Heartbeat-Pause (60s)<small>Idle Detection nach 3 identischen Plänen</small></span>
+          <span data-i="cn">心跳等待（60秒）<small>3次相同计划后进入空闲检测</small></span>
+        </div>
       </div>
     </div>
 
     <div class="code-block">
       <div class="code-header">
         <span class="dot dr"></span><span class="dot dy"></span><span class="dot dg"></span>
-        <span class="code-filename">core/runtime.py — async def tick()</span>
+        <span class="code-filename">core/runtime.py</span>
       </div>
-      <div class="code-body">
-        <span class="cmt"># L1 — Identity &amp; Soul</span><br>
-        <span class="var">soul_t</span> = <span class="fn">compute_soul</span>(base, agenda, accounts, social, decentral)<br><br>
-        <span class="cmt"># L4 — JIT Context Loading (3-Stage)</span><br>
-        registry.<span class="fn">execute</span>(<span class="str">"load_context_always"</span>, {})<br>
-        registry.<span class="fn">execute</span>(<span class="str">"load_context_agenda"</span>, {agenda})<br><br>
-        <span class="cmt"># L3 — Denken</span><br>
-        <span class="var">hooks</span>      = <span class="fn">load</span>(<span class="str">"identity/hook.md"</span>)<br>
-        <span class="var">guidelines</span> = registry.<span class="fn">execute</span>(<span class="str">"read_guidelines"</span>, {task_type})<br>
-        <span class="var">plan</span>       = <span class="fn">planner</span>(<span class="var">soul_t</span>, <span class="var">hooks</span>, <span class="var">memory</span>, <span class="var">guidelines</span>)<br><br>
-        <span class="cmt"># L3 — Handeln (Tool oder Skill)</span><br>
-        <span class="kw">if</span> <span class="var">plan</span>.type == <span class="str">"skill"</span>:<br>
-        &nbsp;&nbsp;<span class="var">results</span> = skill_executor.<span class="fn">execute</span>(<span class="var">plan</span>.skill, <span class="var">context</span>)<br>
-        <span class="kw">else</span>:<br>
-        &nbsp;&nbsp;<span class="var">results</span> = registry.<span class="fn">execute</span>(<span class="var">plan</span>.tool, <span class="var">plan</span>.params)<br><br>
-        <span class="cmt"># L3 — Beobachten</span><br>
-        <span class="var">assessment</span> = <span class="fn">observer</span>(<span class="var">results</span>, <span class="var">diary</span>, <span class="var">guidelines</span>)<br><br>
-        <span class="cmt"># RFL — Reflexion &amp; Selbstkorrektur</span><br>
-        <span class="kw">if</span> <span class="var">assessment</span>.needs_revision:<br>
-        &nbsp;&nbsp;<span class="var">reflection</span> = <span class="fn">reflect</span>(<span class="var">assessment</span>, <span class="var">results</span>, <span class="var">plan</span>)<br>
-        &nbsp;&nbsp;<span class="var">plan</span> = planner.<span class="fn">revise</span>(<span class="var">soul_t</span>, <span class="var">reflection</span>)<br>
-        &nbsp;&nbsp;<span class="var">results</span> = <span class="fn">executor</span>(<span class="var">plan</span>)<span class="cmt">  # Zweiter Versuch</span><br><br>
-        <span class="cmt"># L2 — Procedural Memory + LTM</span><br>
-        observer.<span class="fn">extract_lessons</span>(<span class="var">results</span>)<span class="cmt">  # → GUIDELINES/</span><br>
-        <span class="fn">ltm_update</span>(<span class="var">results</span>, <span class="var">assessment</span>)
-      </div>
+      <div class="code-body"><span class="kw">async def</span> <span class="fn">tick</span>(<span class="var">self</span>):
+    <span class="cmt"># 1. Identity &amp; Soul</span>
+    <span class="var">soul</span> = <span class="var">self</span>.identity.<span class="fn">compute_soul</span>()
+
+    <span class="cmt"># 2. Context (JIT)</span>
+    <span class="var">ctx</span> = <span class="kw">await</span> <span class="var">self</span>.context.<span class="fn">load</span>()
+
+    <span class="cmt"># 3. Plan</span>
+    <span class="var">plan</span> = <span class="kw">await</span> <span class="var">self</span>.planner.<span class="fn">plan</span>(
+        <span class="var">soul</span>, <span class="var">ctx</span>, <span class="var">self</span>.registry
+    )
+
+    <span class="cmt"># 4. Execute</span>
+    <span class="var">results</span> = <span class="kw">await</span> <span class="var">self</span>.executor.<span class="fn">run</span>(
+        <span class="var">plan</span>, <span class="var">self</span>.registry
+    )
+
+    <span class="cmt"># 5. Observe</span>
+    <span class="var">self</span>.observer.<span class="fn">evaluate</span>(<span class="var">results</span>)
+
+    <span class="cmt"># 6. Reflect (RFL)</span>
+    <span class="kw">await</span> <span class="var">self</span>.reflector.<span class="fn">reflect</span>(
+        <span class="var">results</span>, <span class="var">self</span>.observer
+    )</div>
     </div>
   </div>
 </section>
 
 <div class="divider"></div>
 
-<!-- MEMORY SYSTEM -->
+<!-- ═══════════════════ MEMORY SYSTEM ═══════════════════ -->
 <section class="reveal">
   <div class="section-label">// Working System — AAMS v1.3.0</div>
-  <h2>Acht Memory-Schichten. Epistemische Hygiene.</h2>
+  <h2 data-i="en">Eight Memory Layers. Epistemic Hygiene.</h2>
+  <h2 data-i="de">Acht Memory-Schichten. Epistemische Hygiene.</h2>
+  <h2 data-i="cn">八层记忆系统，认知卫生。</h2>
   <div class="mem-grid">
     <div class="mem-card">
       <div class="mem-folder">PROJECT/</div>
       <div class="mem-type">Strategic Memory</div>
-      <div class="mem-q">Woran arbeite ich?<span class="mem-note">Scope · Goals · Milestones<br>_active.yaml → max 1 aktiv</span></div>
+      <div class="mem-q">
+        <span data-i="en">What am I working on?<span class="mem-note">Scope · Goals · Milestones<br>_active.yaml → max 1 active</span></span>
+        <span data-i="de">Woran arbeite ich?<span class="mem-note">Scope · Goals · Milestones<br>_active.yaml → max 1 aktiv</span></span>
+        <span data-i="cn">我在做什么？<span class="mem-note">范围 · 目标 · 里程碑<br>_active.yaml → 最多1个活跃</span></span>
+      </div>
     </div>
     <div class="mem-card">
       <div class="mem-folder">WORKPAPER/</div>
       <div class="mem-type">Working Memory</div>
-      <div class="mem-q">Was tue ich jetzt?<span class="mem-note">Eine Datei pro Session<br>open → work → close → archived</span></div>
+      <div class="mem-q">
+        <span data-i="en">What am I doing now?<span class="mem-note">One file per session<br>open → work → close → archived</span></span>
+        <span data-i="de">Was tue ich jetzt?<span class="mem-note">Eine Datei pro Session<br>open → work → close → archived</span></span>
+        <span data-i="cn">我现在在做什么？<span class="mem-note">每次会话一个文件<br>打开 → 工作 → 关闭 → 归档</span></span>
+      </div>
     </div>
     <div class="mem-card">
       <div class="mem-folder">WHITEPAPER/</div>
-      <div class="mem-type">Semantic Memory (stabil)</div>
-      <div class="mem-q">Wie ist das System aufgebaut?<span class="mem-note">CORE · IDENTITY · WORKING · TOOLS</span></div>
+      <div class="mem-type" data-i="en">Semantic Memory (stable)</div>
+      <div class="mem-type" data-i="de">Semantic Memory (stabil)</div>
+      <div class="mem-type" data-i="cn">语义记忆（稳定）</div>
+      <div class="mem-q">
+        <span data-i="en">How is the system built?<span class="mem-note">CORE · IDENTITY · WORKING · TOOLS</span></span>
+        <span data-i="de">Wie ist das System aufgebaut?<span class="mem-note">CORE · IDENTITY · WORKING · TOOLS</span></span>
+        <span data-i="cn">系统如何构建？<span class="mem-note">CORE · IDENTITY · WORKING · TOOLS</span></span>
+      </div>
     </div>
     <div class="mem-card">
       <div class="mem-folder">MEMORY / LTM</div>
-      <div class="mem-type">Semantic Memory (gelernt)</div>
-      <div class="mem-q">Was haben wir gelernt?<span class="mem-note">ltm-index.md · optional ChromaDB<br>ingestiert aus geschlossenen WPs</span></div>
+      <div class="mem-type" data-i="en">Semantic Memory (learned)</div>
+      <div class="mem-type" data-i="de">Semantic Memory (gelernt)</div>
+      <div class="mem-type" data-i="cn">语义记忆（习得）</div>
+      <div class="mem-q">
+        <span data-i="en">What have we learned?<span class="mem-note">ltm-index.md · optional ChromaDB<br>Ingested from closed workpapers</span></span>
+        <span data-i="de">Was haben wir gelernt?<span class="mem-note">ltm-index.md · optional ChromaDB<br>Ingestiert aus geschlossenen WPs</span></span>
+        <span data-i="cn">我们学到了什么？<span class="mem-note">ltm-index.md · 可选 ChromaDB<br>从已关闭的工作文档中提取</span></span>
+      </div>
     </div>
     <div class="mem-card">
       <div class="mem-folder">DIARY/</div>
       <div class="mem-type">Temporal Index</div>
-      <div class="mem-q">Wann wurde was angefasst?<span class="mem-note">Pointer-only · max 3 Einträge/Tag<br>YYYY-MM.md monatliche Dateien</span></div>
+      <div class="mem-q">
+        <span data-i="en">When was what touched?<span class="mem-note">Pointer-only · max 3 entries/day<br>YYYY-MM.md monthly files</span></span>
+        <span data-i="de">Wann wurde was angefasst?<span class="mem-note">Pointer-only · max 3 Einträge/Tag<br>YYYY-MM.md monatliche Dateien</span></span>
+        <span data-i="cn">什么时候做了什么？<span class="mem-note">仅指针 · 每天最多3条<br>YYYY-MM.md 月度文件</span></span>
+      </div>
     </div>
     <div class="mem-card">
       <div class="mem-folder">GUIDELINES/</div>
       <div class="mem-type">Procedural Memory</div>
-      <div class="mem-q">Wie arbeite ich am besten?<span class="mem-note">Observer extrahiert Lektionen<br>wächst mit jeder Session</span></div>
+      <div class="mem-q">
+        <span data-i="en">How do I work best?<span class="mem-note">Observer extracts lessons<br>Grows with every session</span></span>
+        <span data-i="de">Wie arbeite ich am besten?<span class="mem-note">Observer extrahiert Lektionen<br>Wächst mit jeder Session</span></span>
+        <span data-i="cn">最佳工作方式？<span class="mem-note">观察器提取经验<br>每次会话后增长</span></span>
+      </div>
     </div>
     <div class="mem-card">
       <div class="mem-folder">SCIENCE/</div>
-      <div class="mem-type">Epistemisch</div>
-      <div class="mem-q">Stimmt das? Wo stehen wir?<span class="mem-note">research · validate · hypothesize<br>Eigene Lösung vs. State-of-the-Art</span></div>
+      <div class="mem-type" data-i="en">Epistemic Layer</div>
+      <div class="mem-type" data-i="de">Epistemische Schicht</div>
+      <div class="mem-type" data-i="cn">认知层</div>
+      <div class="mem-q">
+        <span data-i="en">Is this correct? Where do we stand?<span class="mem-note">research · validate · hypothesize<br>Own solution vs. state-of-the-art</span></span>
+        <span data-i="de">Stimmt das? Wo stehen wir?<span class="mem-note">research · validate · hypothesize<br>Eigene Lösung vs. State-of-the-Art</span></span>
+        <span data-i="cn">这正确吗？我们在哪里？<span class="mem-note">研究 · 验证 · 假设<br>自有方案 vs. 最前沿</span></span>
+      </div>
     </div>
     <div class="mem-card">
       <div class="mem-folder">TOOLS/skills/</div>
-      <div class="mem-type">Skill-Orchestrierung — L5</div>
-      <div class="mem-q">Wie kombiniere ich Tools?<span class="mem-note">Markdown + YAML Workflows<br>multi-step Prozesse als Skill</span></div>
+      <div class="mem-type" data-i="en">Skill Orchestration — L5</div>
+      <div class="mem-type" data-i="de">Skill-Orchestrierung — L5</div>
+      <div class="mem-type" data-i="cn">技能编排 — L5</div>
+      <div class="mem-q">
+        <span data-i="en">How do I combine tools?<span class="mem-note">Markdown + YAML workflows<br>Multi-step processes as skills</span></span>
+        <span data-i="de">Wie kombiniere ich Tools?<span class="mem-note">Markdown + YAML Workflows<br>Multi-Step Prozesse als Skill</span></span>
+        <span data-i="cn">如何组合工具？<span class="mem-note">Markdown + YAML 工作流<br>多步骤流程作为技能</span></span>
+      </div>
     </div>
   </div>
   <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-top:16px;padding:12px 16px;border-left:2px solid var(--border);">
-    Wissenskette (strikt): <strong style="color:var(--text)">Workpaper → Whitepaper → LTM</strong> — flüchtige Ideen werden erst Architektur, dann Langzeitgedächtnis. Whitepaper &gt; Guideline bei Konflikt.
+    <span data-i="en">Knowledge chain (strict): <strong style="color:var(--text)">Workpaper → Whitepaper → LTM</strong> — fleeting ideas become architecture, then long-term memory. Whitepaper &gt; Guideline on conflict.</span>
+    <span data-i="de">Wissenskette (strikt): <strong style="color:var(--text)">Workpaper → Whitepaper → LTM</strong> — flüchtige Ideen werden erst Architektur, dann Langzeitgedächtnis. Whitepaper &gt; Guideline bei Konflikt.</span>
+    <span data-i="cn">知识链（严格）：<strong style="color:var(--text)">工作文档 → 白皮书 → 长期记忆</strong> — 临时想法先成为架构，再成为长期记忆。白皮书 &gt; 指南（冲突时）。</span>
   </p>
 </section>
 
 <div class="divider"></div>
 
-<!-- DASHBOARD -->
+<!-- ═══════════════════ DASHBOARD ═══════════════════ -->
 <section class="reveal">
   <div class="section-label">// Web Dashboard</div>
-  <h2>localhost:8080 — Echtzeit-Einblick in den Agenten.</h2>
+  <h2 data-i="en">localhost:8080 — Real-time Agent Insight.</h2>
+  <h2 data-i="de">localhost:8080 — Echtzeit-Einblick in den Agenten.</h2>
+  <h2 data-i="cn">localhost:8080 — 实时代理洞察。</h2>
   <div class="dash-wrap">
     <div class="dash-panel">
-      <div class="dash-panel-title">Links — Runtime Status</div>
-      <div class="dash-item">Runtime-Status &amp; Health</div>
-      <div class="dash-item">Identity / soul(t)</div>
-      <div class="dash-item">Workspace-Baum</div>
-      <div class="dash-item">Aktives Workpaper</div>
-      <div class="dash-item">Aktives Projekt</div>
+      <div class="dash-panel-title" data-i="en">Left — Agent Status</div>
+      <div class="dash-panel-title" data-i="de">Links — Agent Status</div>
+      <div class="dash-panel-title" data-i="cn">左侧 — 代理状态</div>
+      <div class="dash-item">L1 · Core (Backend/Model)</div>
+      <div class="dash-item">L2 · Identity / soul(t)</div>
+      <div class="dash-item">L3 · Runtime (Live Ticks)</div>
+      <div class="dash-item">L4 · Tools (Project + Core)</div>
     </div>
     <div class="dash-panel" style="display:flex;flex-direction:column;gap:12px;">
-      <div class="dash-panel-title">Mitte — Chat mit dem Agenten (SSE Token-Streaming)</div>
+      <div class="dash-panel-title" data-i="en">Center — Chat (SSE Token Streaming)</div>
+      <div class="dash-panel-title" data-i="de">Mitte — Chat (SSE Token-Streaming)</div>
+      <div class="dash-panel-title" data-i="cn">中间 — 对话（SSE Token 流）</div>
       <div class="dash-chat">
-        <div class="dash-bubble">User &gt; Was ist der aktuelle Plan?</div>
-        <div class="dash-bubble agent">Agent &gt; Tick 42 · Agenda: Coding<br>&nbsp;soul(t) berechnet · Plan: 3 Steps<br>&nbsp;Step 1: read_file core/planner.py ▋</div>
+        <div class="dash-bubble">&gt; What is the current project status?</div>
+        <div class="dash-bubble agent">MantisClaw: Active project: MantisClaw Core. 9/11 milestones done. Current focus: Project-Scoped AAMS architecture.</div>
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);">Token-by-Token via SSE · Model-Switcher: LM Studio ↔ Ollama live wechselbar</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);">
+        <span data-i="en">Token-by-token via SSE · Model switcher: LM Studio ↔ Ollama live</span>
+        <span data-i="de">Token-by-Token via SSE · Model-Switcher: LM Studio ↔ Ollama live</span>
+        <span data-i="cn">逐Token通过SSE · 模型切换：LM Studio ↔ Ollama 实时</span>
+      </div>
     </div>
     <div class="dash-panel">
-      <div class="dash-panel-title">Rechts — History</div>
-      <div class="dash-item">Chat-History</div>
-      <div class="dash-item">Offene Workpapers</div>
-      <div class="dash-item" style="color:var(--muted)">(reserved)</div>
-      <div class="dash-item" style="color:var(--muted)">(reserved)</div>
+      <div class="dash-panel-title" data-i="en">Right — Knowledge</div>
+      <div class="dash-panel-title" data-i="de">Rechts — Wissen</div>
+      <div class="dash-panel-title" data-i="cn">右侧 — 知识</div>
+      <div class="dash-item">R1 · Chat History</div>
+      <div class="dash-item">R2 · Project (Milestones)</div>
+      <div class="dash-item">R3 · Workpapers</div>
+      <div class="dash-item">R4 · Workspace</div>
     </div>
   </div>
   <div style="margin-top:12px;">
@@ -567,14 +691,18 @@
 
 <div class="divider"></div>
 
-<!-- QUICKSTART -->
+<!-- ═══════════════════ QUICKSTART ═══════════════════ -->
 <section class="reveal">
   <div class="section-label">// Quick Start</div>
-  <h2>In fünf Schritten zum laufenden Agenten.</h2>
+  <h2 data-i="en">Five Steps to a Running Agent.</h2>
+  <h2 data-i="de">In fünf Schritten zum laufenden Agenten.</h2>
+  <h2 data-i="cn">五步启动代理。</h2>
   <div class="qs-grid">
     <div class="qs-card">
       <div class="qs-num">01</div>
-      <div class="qs-title">Repo klonen</div>
+      <div class="qs-title" data-i="en">Clone Repo</div>
+      <div class="qs-title" data-i="de">Repo klonen</div>
+      <div class="qs-title" data-i="cn">克隆仓库</div>
       <code class="qs-cmd">git clone https://github.com/DEVmatrose/MantisClaw
 cd MantisClaw</code>
     </div>
@@ -587,22 +715,28 @@ source .venv/bin/activate</code>
     </div>
     <div class="qs-card">
       <div class="qs-num">03</div>
-      <div class="qs-title">Konfiguration</div>
+      <div class="qs-title" data-i="en">Configuration</div>
+      <div class="qs-title" data-i="de">Konfiguration</div>
+      <div class="qs-title" data-i="cn">配置</div>
       <code class="qs-cmd">cp config/.env.example .env</code>
-      <p class="qs-note">LLM_BACKEND=lmstudio (default) oder ollama<br>Optional: OPENAI_API_KEY, ANTHROPIC_API_KEY</p>
+      <p class="qs-note">LLM_BACKEND=lmstudio (default)<br>Optional: OPENAI_API_KEY, ANTHROPIC_API_KEY</p>
     </div>
     <div class="qs-card">
       <div class="qs-num">04</div>
-      <div class="qs-title">Identität einrichten</div>
+      <div class="qs-title" data-i="en">Set Up Identity</div>
+      <div class="qs-title" data-i="de">Identität einrichten</div>
+      <div class="qs-title" data-i="cn">设置身份</div>
       <code class="qs-cmd">cp identity/base.md.example identity/base.md
 cp identity/agenda.md.example identity/agenda.md</code>
       <p class="qs-note">Optional: account, social, decentral, hook</p>
     </div>
     <div class="qs-card">
       <div class="qs-num">05</div>
-      <div class="qs-title">LLM &amp; Agent starten</div>
-      <code class="qs-cmd"># LM Studio: Server auf :1234
-# oder Ollama:
+      <div class="qs-title" data-i="en">Start LLM &amp; Agent</div>
+      <div class="qs-title" data-i="de">LLM &amp; Agent starten</div>
+      <div class="qs-title" data-i="cn">启动 LLM &amp; 代理</div>
+      <code class="qs-cmd"># LM Studio: Server on :1234
+# or Ollama:
 ollama serve
 ollama run qwen3-coder</code>
       <code class="qs-cmd">python -m core.runtime</code>
@@ -612,32 +746,50 @@ ollama run qwen3-coder</code>
 
 <div class="divider"></div>
 
-<!-- MANTIS-OS -->
+<!-- ═══════════════════ MANTIS-OS ═══════════════════ -->
 <section class="reveal">
   <div class="section-label">// Integration</div>
-  <h2>Standalone oder Teil von Mantis-OS.</h2>
+  <h2 data-i="en">Standalone or Part of Mantis-OS.</h2>
+  <h2 data-i="de">Standalone oder Teil von Mantis-OS.</h2>
+  <h2 data-i="cn">独立运行或集成至 Mantis-OS。</h2>
   <div class="os-wrap">
     <div class="os-box">
       <div class="os-box-label">Standalone</div>
       <div class="os-box-title">MantisClaw</div>
-      <div class="os-box-desc">Gehirn + Identität + AAMS Body. Einzelnes Repo, eigenständig lauffähig. Local-first, kein Cloud-Zwang. Der Code ist identisch mit MantisClaw in Mantis-OS.</div>
+      <div class="os-box-desc">
+        <span data-i="en">Brain + Identity + AAMS Body. Single repo, runs standalone. Local-first, no cloud required. The code is identical with MantisClaw in Mantis-OS.</span>
+        <span data-i="de">Gehirn + Identität + AAMS Body. Einzelnes Repo, eigenständig lauffähig. Local-first, kein Cloud-Zwang. Der Code ist identisch mit MantisClaw in Mantis-OS.</span>
+        <span data-i="cn">大脑 + 身份 + AAMS 主体。单一仓库，独立运行。本地优先，无需云端。代码与 Mantis-OS 中的 MantisClaw 完全一致。</span>
+      </div>
     </div>
     <div class="os-sep">+</div>
     <div class="os-box">
       <div class="os-box-label">Optional</div>
       <div class="os-box-title">MantisNostr</div>
-      <div class="os-box-desc">Mesh-Netzwerk Layer. L6 Network. Agenten kommunizieren über das Nostr-Protokoll in einem dezentralen Mesh.</div>
+      <div class="os-box-desc">
+        <span data-i="en">Mesh network layer. L6 Network. Agents communicate via the Nostr protocol in a decentralized mesh.</span>
+        <span data-i="de">Mesh-Netzwerk Layer. L6 Network. Agenten kommunizieren über das Nostr-Protokoll in einem dezentralen Mesh.</span>
+        <span data-i="cn">网格网络层。L6 网络。代理通过 Nostr 协议在去中心化网格中通信。</span>
+      </div>
     </div>
     <div class="os-sep">=</div>
     <div class="os-box">
-      <div class="os-box-label" style="color:var(--green)">Vollständiger Knoten</div>
+      <div class="os-box-label" style="color:var(--green)">
+        <span data-i="en">Complete Node</span>
+        <span data-i="de">Vollständiger Knoten</span>
+        <span data-i="cn">完整节点</span>
+      </div>
       <div class="os-box-title">Mantis-OS</div>
-      <div class="os-box-desc">Autonomes Agenten-Betriebssystem. MantisClaw als Gehirn, MantisNostr als Nervensystem. Nur die Integration unterscheidet sich.</div>
+      <div class="os-box-desc">
+        <span data-i="en">Autonomous agent operating system. MantisClaw as brain, MantisNostr as nervous system. Only the integration differs.</span>
+        <span data-i="de">Autonomes Agenten-Betriebssystem. MantisClaw als Gehirn, MantisNostr als Nervensystem. Nur die Integration unterscheidet sich.</span>
+        <span data-i="cn">自主代理操作系统。MantisClaw 为大脑，MantisNostr 为神经系统。只有集成方式不同。</span>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- FOOTER -->
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
 <footer class="reveal">
   <div class="footer-name">MantisClaw</div>
   <div class="footer-links">
@@ -656,11 +808,49 @@ ollama run qwen3-coder</code>
 </footer>
 
 <script>
-  const obs = new IntersectionObserver(
-    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-    { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
-  );
-  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+// ─── Language switcher with auto-detect ───
+function setLang(lang) {
+  document.querySelectorAll('[data-i]').forEach(function(el) {
+    if (el.dataset.i === lang) {
+      el.classList.add('show');
+    } else {
+      el.classList.remove('show');
+    }
+  });
+  document.querySelectorAll('.lang-btn').forEach(function(btn) {
+    if (btn.dataset.l === lang) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  document.documentElement.lang = lang === 'cn' ? 'zh' : lang;
+  try { localStorage.setItem('mc-lang', lang); } catch(e) {}
+}
+
+// Auto-detect: saved preference → browser language → fallback EN
+(function() {
+  var lang = null;
+  try { lang = localStorage.getItem('mc-lang'); } catch(e) {}
+  if (!lang) {
+    var bl = (navigator.language || '').toLowerCase();
+    if (bl.indexOf('de') === 0) lang = 'de';
+    else if (bl.indexOf('zh') === 0) lang = 'cn';
+    else lang = 'en';
+  }
+  setLang(lang);
+})();
+
+// ─── Scroll reveal ───
+var obs = new IntersectionObserver(
+  function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  },
+  { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+);
+document.querySelectorAll('.reveal').forEach(function(el) { obs.observe(el); });
 </script>
 </body>
 </html>
