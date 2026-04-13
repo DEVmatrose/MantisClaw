@@ -39,16 +39,17 @@ soul(t) = f(base, agenda.resolve(account, social, decentral), working_context)
 
 | Folder | Purpose |
 |---|---|
-| `core/` | The brain: runtime.py, planner.py, executor.py, observer.py, llm.py, session.py, workpaper.py, ltm.py |
+| `core/` | The brain: runtime.py, planner.py, executor.py, observer.py, reflect.py, llm.py + registry/ (tool-registry, skill_executor) |
 | `identity/` | Emergent identity: base.md, agenda.md, account.md, social.md, decentral.md, hook.md |
 | `WORKSPACE/WORKING/WHITEPAPER/` | Stable architecture and system truth |
 | `WORKSPACE/WORKING/WORKPAPER/` | Session- and task-scoped working documents. One per session. |
 | `WORKSPACE/WORKING/WORKPAPER/closed/` | Finished workpapers after session close |
-| `WORKSPACE/WORKING/DIARY/` | Temporal context layer. Chronological decision log. Monthly files. |
+| `WORKSPACE/WORKING/DIARY/` | Temporal index layer. Pointer-only time log — WHAT was touched WHEN. Monthly files. |
 | `WORKSPACE/WORKING/MEMORY/` | Long-term context store. Cross-session knowledge. |
 | `WORKSPACE/WORKING/LOGS/` | Agent action logs and audit trail |
-| `WORKSPACE/WORKING/GUIDELINES/` | Coding standards and architecture rules |
-| `WORKSPACE/WORKING/TOOLS/` | Agent-specific helper tools and scripts |
+| `WORKSPACE/WORKING/GUIDELINES/` | Procedural memory. Learnable work patterns. Written by observer, read by planner. |
+| `WORKSPACE/WORKING/TOOLS/` | Skills (orchestration recipes in Markdown+YAML). Tool implementations live in `core/registry/tools/`. |
+| `WORKSPACE/WORKING/SCIENCE/` | Knowledge validation layer. Research, reviews, hypotheses. |
 
 ---
 
@@ -59,13 +60,13 @@ soul(t) = f(base, agenda.resolve(account, social, decentral), working_context)
 1. **Workpaper** — What am I doing right now in this session?
    - Created at session start, closed at session end.
    - File protocol (created/modified/moved/deleted) is mandatory.
-   - Naming: `{date}-{agent}-{topic}.md`
+   - Naming: `{DATE}-{TOPIC}-{SUBTOPIC}-{description}.md` (TOPIC from registry: ARCH, SPEC, LTM, SEC, BOOT, FLD, TOOL, DASH, SOUL etc.)
 
 2. **Whitepaper** — What does this system look like?
    - Stable. Written once. Updated only on architecture decisions.
    - Never moved, never deleted.
 
-3. **Diary** — Why did we decide this?
+3. **Diary** — When was what touched? (pointer-only, no content duplication)
    - Chronological decision log. Monthly files (`YYYY-MM.md`).
    - Max 10 lines per entry. Captures strategic motives, blockers, reflections.
 
@@ -111,9 +112,10 @@ Agents may maintain their own internal task tracking (e.g., `.gemini/brain/`, Co
 
 ### On every session end
 1. Complete workpaper (file protocol, decisions, next steps)
-2. Ingest workpaper into `WORKSPACE/WORKING/MEMORY/`
-3. Move workpaper to `WORKSPACE/WORKING/WORKPAPER/closed/`
-4. Update this file (`READ-AGENT.md`) if architecture changed
+2. Update Whitepapers if session contains architectural decisions (Wissenskette: WP → WH → LTM — never skip)
+3. Ingest workpaper into `WORKSPACE/WORKING/MEMORY/` (after Whitepapers are current)
+4. Move workpaper to `WORKSPACE/WORKING/WORKPAPER/closed/`
+5. Update this file (`READ-AGENT.md`) if architecture changed
 
 ---
 
@@ -123,8 +125,9 @@ Agents may maintain their own internal task tracking (e.g., `.gemini/brain/`, Co
 
 **AAMS (Autonomous Agent Manifest Specification)** is the **Körper** (body) of MantisClaw:
 - `WORKSPACE/` structure is AAMS
-- Whitepapers, Workpapers, LTM, Diary — alle aus AAMS
-- MantisClaw ist eigenständig, aber **braucht AAMS** für agentisches Arbeiten
+- Whitepapers, Workpapers, LTM, Diary, Guidelines, SCIENCE, Skills — alle aus AAMS
+- MantisClaw hat AAMS als Struktur **fest integriert**
+- **Kernregel:** L3 (Loop) berührt L2 (Körper) nie direkt — jeder Zugriff über registrierte Tools (L4)
 
 ### Emergent Identity
 

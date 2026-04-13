@@ -13,6 +13,7 @@
 | **LTM** | **L**ong-**T**erm **M**emory | `WORKSPACE/WORKING/MEMORY/` + `AGENT-MEMORY/` | ltm-index.md |
 | **GL** | **G**uide**l**ines | `WORKSPACE/WORKING/GUIDELINES/` | — |
 | **DI** | **Di**ary | `WORKSPACE/WORKING/DIARY/` | 2026-04.md |
+| **WH-TOOLS** | Whitepaper Werkzeuge | `WORKSPACE/WORKING/WHITEPAPER/` | TOOLS.md |
 
 ## Schichten (Layer)
 
@@ -20,11 +21,12 @@
 |--------|-----------|-----|
 | **L0** | Hardware / LLM-Backend | `core/llm.py` + `config/` |
 | **L1** | Identität | `identity/` |
-| **L2** | AAMS Body (Workspace) | `WORKSPACE/WORKING/` |
-| **L3** | Runtime (Gehirn) | `core/` |
-| **L4** | Werkzeuge | `WORKSPACE/WORKING/TOOLS/` |
-| **L5** | Security | `WORKSPACE/WORKING/TOOLS/` (integriert) |
-| **L6** | Netzwerk / MantisNostr | `mesh/mantisnostr/` |
+| **L2** | AAMS Body (Körper) | `WORKSPACE/WORKING/` |
+| **L3** | Runtime / Loop (Gehirn) | `core/` (runtime, planner, executor, observer, reflect) |
+| **L4** | Tool-Registry (Fähigkeiten) | `core/registry/` — Whitelist aller Tools |
+| **L5** | Skills (Procedural Memory) | `WORKING/TOOLS/skills/` — Orchestrierungs-Rezepte |
+| **L6** | Security | Querschnitt — Security-Levels in Registry |
+| **L7** | Netzwerk / MantisNostr | `core/registry/tools/nostr.py` |
 
 ## Systeme & Standards
 
@@ -59,6 +61,9 @@
 |--------|-----------|--------------|
 | **WK** | **W**issens**k**ette | WP → WH → LTM (strenge Reihenfolge) |
 | **DTR** | **D**ual-**Tr**ack | LTM-Modus: Markdown (A) + Vector (B) |
+| **RFL** | **R**e**fl**ection-Loop | Observer→reflect()→Planner Rückkanal, max 2 Retries |
+| **JIT** | **J**ust-**I**n-**T**ime Context Loading | 3-Stufen: Always (~3k) + Agenda (~8k) + Query (~5k) |
+| **SCIENCE** | **S**cience, **I**nsights, **N**ovelty, **C**ontext, **E**vidence | Knowledge Validation Layer |
 
 ## Memory-Klassen
 

@@ -1,0 +1,62 @@
+{
+  "_spec": "mantisagent/1.0",
+  "_doc": "MantisClaw Agent Bootstrap für Mantis-OS. Diese Datei wird von Mantis-OS gelesen, um MantisClaw als Agent-Modul zu registrieren und zu konfigurieren.",
+  "_project": "https://github.com/DEVmatrose/MantisClaw",
+
+  "agent": {
+    "name": "MantisClaw",
+    "version": "0.1.0",
+    "type": "agent-loop",
+    "description": "Autonomous Agent Loop Framework mit emergenter Identität — soul(t)",
+    "entry_point": "core/runtime.py",
+    "identity_root": "identity/"
+  },
+
+  "soul": {
+    "_doc": "Emergente Identität. Die Soul ist nicht statisch — sie entsteht aus dem aktuellen Kontext.",
+    "formula": "soul(t) = f(base, agenda.resolve(account, social, decentral), working_context)",
+    "base": "identity/base.md",
+    "agenda": "identity/agenda.md",
+    "layers": {
+      "account": "identity/account.md",
+      "social": "identity/social.md",
+      "decentral": "identity/decentral.md"
+    },
+    "hook": "identity/hook.md"
+  },
+
+  "runtime": {
+    "heartbeat_interval": 10,
+    "max_retries": 3,
+    "session_timeout": 3600,
+    "config": "config/default.yaml"
+  },
+
+  "capabilities": {
+    "planning": true,
+    "execution": true,
+    "observation": true,
+    "ltm": true,
+    "workpaper_management": true
+  },
+
+  "integration": {
+    "_doc": "Wie MantisClaw in Mantis-OS eingebunden wird.",
+    "mode": "standalone",
+    "modes_available": ["standalone", "mantis-os"],
+    "mantis_os": {
+      "register_as": "brain",
+      "mesh_enabled": false,
+      "relay_url": null,
+      "shared_identity": false
+    }
+  },
+
+  "aams": {
+    "_doc": "AAMS-Kompatibilität. MantisClaw folgt dem AAMS-Protokoll für Workspace-Management.",
+    "contract": ".agent.json",
+    "entry_point": "READ-AGENT.md",
+    "workspace_root": "./WORKSPACE/WORKING",
+    "ltm_audit_log": "./WORKSPACE/WORKING/MEMORY/ltm-index.md"
+  }
+}

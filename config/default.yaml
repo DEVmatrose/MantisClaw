@@ -5,9 +5,22 @@ runtime:
   max_retries: 3                # Retry bei Tool-Fehlern
   session_timeout: 3600         # Max Session-Dauer (Sek)
 
+reflection:
+  max_retries: 2                # Max RFL-Reruns pro Fehlerkette
+  cooldown_ticks: 3             # Ticks Pause zwischen Reflections
+
 llm:
-  backend: "openai"             # openai | ollama | anthropic
-  model: "gpt-4"
+  # Local-first: lmstudio (default) | ollama | openai | anthropic
+  backend: "lmstudio"
+  # LM Studio: model wird vom Server bestimmt, hier der aktuell geladene
+  # Ollama: z.B. "llama3", "mistral", "codellama"
+  # OpenAI: z.B. "gpt-4"
+  model: "qwen3-coder-30b-a3b-instruct"
+  # base_url wird aus DEFAULTS geladen wenn nicht gesetzt:
+  #   lmstudio:  http://localhost:1234/v1
+  #   ollama:    http://localhost:11434
+  #   openai:    https://api.openai.com/v1
+  # base_url: "http://localhost:1234/v1"
   temperature: 0.7
   max_tokens: 4096
 

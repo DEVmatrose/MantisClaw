@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MantisClaw Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <span class="logo">🦂 MantisClaw</span>
+            <span class="nav-subtitle">Autonomous Agent Dashboard</span>
+        </div>
+        <div class="nav-right">
+            <span class="status-dot {% if connection.lmstudio or connection.ollama %}online{% else %}offline{% endif %}"></span>
+            <span class="nav-model" id="navModel">{{ state.model }}</span>
+            <button class="btn btn-sm" onclick="refreshModels()">⟳</button>
+        </div>
+    </nav>
+
+    <!-- MAIN 3-COLUMN LAYOUT -->
+    <div class="dashboard">
+        <!-- LEFT SIDEBAR — 4 Boxes -->
+        <aside class="sidebar left">
+            <!-- L1: CORE -->
+            <div class="box" id="box-L1">
+                <div class="box-header">L1 · Core</div>
+                <div class="box-body">
+                    <div class="core-status">
+                        <label>Backend:</label>
+                        <select id="backendSelect" onchange="switchBackend()">
+                            <option value="lmstudio" {% if state.backend == 'lmstudio' %}selected{% endif %}>LM Studio</option>
+                            <option value="ollama" {% if state.backend == 'ollama' %}selected{% endif %}>Ollama</option>
+                        </select>
+                    </div>
+                    <div class="core-status">
+                        <label>Model:</label>
+                        <select id="modelSelect">
+                            <option>{{ state.model }}</option>
+                        </select>
+                    </div>
+                    <div class="core-status">
+                        <span class="status-dot {% if connection.lmstudio %}online{% else %}offline{% endif %}"></span>
+                        LM Studio
+                        <span class="status-dot {% if connection.ollama %}online{% else %}offline{% endif %}" style="margin-left:8px"></span>
+                        Ollama
+                    </div>
+                </div>
+            </div>
+
+            <!-- L2: IDENTITY -->
+            <div class="box" id="box-L2">
+                <div class="box-header">L2 · Identity</div>
+                <div class="box-body">
+                    <div class="id-field"><strong>Name:</strong> {{ identity.name or '(not set)' }}</div>
+                    <div class="id-field"><strong>Owner:</strong> {{ identity.owner or '(not set)' }}</div>
+                    <div class="id-formula">soul(t) = f(base, agenda, ctx)</div>
+                </div>
+            </div>
+
+            <!-- L3: WORKSPACE -->
+            <div class="box" id="box-L3">
+                <div class="box-header">L3 · Workspace</div>
+                <div class="box-body">
+                    {% if active_project %}
+                    <div class="ws-project">
+                        <span class="folder-icon">🎯</span>
+                        <strong>{{ active_project.name }}</strong>
+                        <span class="project-status">{{ active_project.status }}</span>
+                    </div>
+                    {% if active_project.milestones %}
+                    <div class="ws-milestones">
+                        {% for ms in active_project.milestones %}
+                        <div class="ms-item ms-{{ ms.status }}">
+                            {% if ms.status == 'done' %}✅{% elif ms.status == 'in-progress' %}🔨{% else %}⬜{% endif %}
+                            {{ ms.name }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <hr style="border-color: #2a3a4a; margin: 6px 0;">
+                    {% endif %}
+                    {% for folder in workspace %}
+                    <div class="ws-folder">
+                        <span class="folder-icon">📁</span>
+                        {{ folder.name }}
+                        <span class="folder-count">{{ folder.count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- L4: WORKING (Active Workpaper) -->
+            <div class="box box-tall" id="box-L4">
+                <div class="box-header">L4 · Working{% if active_wp %} — {{ active_wp.name }}{% endif %}</div>
+                <div class="box-body workpaper-content">
+                    {% if active_wp %}
+                    <pre class="wp-text">{{ active_wp.content[:2000] }}{% if active_wp.content|length > 2000 %}…{% endif %}</pre>
+                    {% else %}
+                    <span class="muted">Kein aktives Workpaper</span>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <!-- CENTER — Chat -->
+        <main class="chat-area">
+            <div class="chat-messages" id="chatMessages">
+                {% if not conv_id %}
+                <div class="chat-welcome">
+                    <h2>MantisClaw</h2>
+                    <p>Wähle eine Conversation oder starte eine neue.</p>
+                    <form action="/conversations" method="post">
+                        <button class="btn btn-primary" type="submit">+ Neue Conversation</button>
+                    </form>
+                </div>
+                {% else %}
+                    {% for msg in messages %}
+                    <div class="message {{ msg.role }}">
+                        <div class="message-role">{{ msg.role }}</div>
+                        <div class="message-content">{{ msg.content | replace('<think>', '<details class="thinking-block"><summary>💭 Thinking...</summary><div class="thinking-content">') | replace('</think>', '</div></details>') | safe }}</div>
+                    </div>
+                    {% endfor %}
+                    <div id="streamTarget" class="message assistant" style="display:none">
+                        <div class="message-role">assistant</div>
+                        <div class="message-content" id="streamContent"></div>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if conv_id %}
+            <div class="chat-input">
+                <form action="/chat/{{ conv_id }}/send" method="post" class="input-form" id="chatForm">
+                    <textarea name="message" id="messageInput" placeholder="Nachricht an MantisClaw..." rows="2"
+                              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit()}"></textarea>
+                    <button type="submit" class="btn btn-primary" id="sendBtn">Senden</button>
+                </form>
+            </div>
+            {% endif %}
+        </main>
+
+        <!-- RIGHT SIDEBAR — 4 Boxes -->
+        <aside class="sidebar right">
+            <!-- R1: CHAT HISTORY -->
+            <div class="box" id="box-R1">
+                <div class="box-header">
+                    R1 · Chat-History
+                    <form action="/conversations" method="post" style="display:inline">
+                        <button class="btn btn-xs" type="submit">+</button>
+                    </form>
+                </div>
+                <div class="box-body">
+                    {% for c in conversations %}
+                    <a href="/chat/{{ c.id }}" class="conv-item {% if conv_id == c.id %}active{% endif %}">
+                        <span class="conv-title">{{ c.title }}</span>
+                        <span class="conv-date">{{ c.updated_at[:10] }}</span>
+                    </a>
+                    {% endfor %}
+                    {% if not conversations %}
+                    <span class="muted">Keine Conversations</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- R2: WORKPAPERS -->
+            <div class="box box-tall" id="box-R2">
+                <div class="box-header">R2 · Workpapers <span class="wp-count" id="wpCount">{{ workpapers|length }}</span></div>
+                <div class="box-body">
+                    {% for wp in workpapers %}
+                    <div class="wp-item" onclick="showWorkpaper('{{ wp.name }}')" style="cursor:pointer" title="{{ wp.name }}">
+                        <span class="wp-status {{ wp.status|lower }}">{{ wp.status }}</span>
+                        <span class="wp-name">{{ wp.name }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if not workpapers %}
+                    <span class="muted">Keine Workpapers</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- R3: RUNTIME -->
+            <div class="box" id="box-R3">
+                <div class="box-header">R3 · Runtime <span class="status-dot" id="runtimeDot"></span></div>
+                <div class="box-body" id="runtimeInfo">
+                    <span class="muted">Lade Runtime-Status...</span>
+                </div>
+            </div>
+
+            <!-- R4: TOOLS -->
+            <div class="box" id="box-R4">
+                <div class="box-header">R4 · Tools</div>
+                <div class="box-body" id="toolsList">
+                    <span class="muted">Lade Tools...</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <span>MantisClaw v0.1.0</span>
+        <span>Backend: {{ state.backend }} · Model: {{ state.model }}</span>
+        <span>
+            LM Studio: <span class="status-dot {% if connection.lmstudio %}online{% else %}offline{% endif %}"></span>
+            Ollama: <span class="status-dot {% if connection.ollama %}online{% else %}offline{% endif %}"></span>
+        </span>
+    </footer>
+
+    <script>
+    // Auto-scroll chat
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // SSE Streaming
+    {% if generating is defined and generating %}
+    (function() {
+        const target = document.getElementById('streamTarget');
+        const content = document.getElementById('streamContent');
+        const sendBtn = document.getElementById('sendBtn');
+        if (target) target.style.display = 'block';
+        if (sendBtn) sendBtn.disabled = true;
+
+        const es = new EventSource('/chat/{{ conv_id }}/stream');
+        let fullText = '';
+        let inThinking = false;
+
+        function renderContent(text) {
+            // Replace <think>...</think> with collapsible blocks
+            let html = text
+                .replace(/<think>/g, '<details class="thinking-block"><summary>💭 Thinking...</summary><div class="thinking-content">')
+                .replace(/<\/think>/g, '</div></details>');
+            // Handle unclosed thinking block (still streaming)
+            if ((html.match(/<details/g) || []).length > (html.match(/<\/details>/g) || []).length) {
+                html += '</div></details>';
+            }
+            content.innerHTML = html;
+        }
+
+        es.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.done) {
+                es.close();
+                window.location.href = '/chat/{{ conv_id }}';
+                return;
+            }
+            if (data.content) {
+                fullText += data.content;
+                renderContent(fullText);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        };
+        es.onerror = function() {
+            es.close();
+            window.location.href = '/chat/{{ conv_id }}';
+        };
+    })();
+    {% endif %}
+
+    // Model switching
+    async function refreshModels() {
+        const resp = await fetch('/api/models');
+        const data = await resp.json();
+        const select = document.getElementById('modelSelect');
+        const backend = document.getElementById('backendSelect').value;
+        const models = data[backend] || [];
+        select.innerHTML = '';
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            if (m === data.current_model) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    async function switchBackend() {
+        await refreshModels();
+        const backend = document.getElementById('backendSelect').value;
+        const model = document.getElementById('modelSelect').value;
+        await fetch('/api/model', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({backend, model})
+        });
+        document.getElementById('navModel').textContent = model;
+    }
+
+    document.getElementById('modelSelect')?.addEventListener('change', async function() {
+        const backend = document.getElementById('backendSelect').value;
+        const model = this.value;
+        await fetch('/api/model', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({backend, model})
+        });
+        document.getElementById('navModel').textContent = model;
+    });
+
+    // Load models on page load
+    refreshModels();
+
+    // Workpaper viewer
+    async function showWorkpaper(name) {
+        const resp = await fetch('/api/workpapers/' + encodeURIComponent(name));
+        const data = await resp.json();
+        if (data.content) {
+            const wpBox = document.getElementById('box-L4');
+            const header = wpBox.querySelector('.box-header');
+            const body = wpBox.querySelector('.box-body');
+            header.textContent = 'L4 · Working — ' + data.name;
+            body.innerHTML = '<pre class="wp-text">' + data.content.substring(0, 3000) +
+                (data.content.length > 3000 ? '…' : '') + '</pre>';
+        }
+    }
+
+    // Runtime status polling
+    async function pollRuntime() {
+        try {
+            const resp = await fetch('/api/runtime');
+            const data = await resp.json();
+            const dot = document.getElementById('runtimeDot');
+            const info = document.getElementById('runtimeInfo');
+            const tools = document.getElementById('toolsList');
+
+            if (data.running) {
+                dot.className = 'status-dot online';
+                info.innerHTML =
+                    '<div style="font-size:12px">' +
+                    '<div>Tick: <strong>' + data.tick_count + '</strong></div>' +
+                    '<div>Health: <strong>' + data.health + '</strong></div>' +
+                    '<div>Heartbeat: ' + data.heartbeat + 's</div>' +
+                    '</div>';
+
+                if (data.tools && data.tools.length > 0) {
+                    tools.innerHTML = data.tools.map(t =>
+                        '<div class="tool-item" title="' + t.description + '">' +
+                        '<span class="tool-name">' + t.name + '</span>' +
+                        '<span class="tool-level">L' + t.level + '</span></div>'
+                    ).join('');
+                }
+            } else {
+                dot.className = 'status-dot';
+                info.innerHTML = '<span class="muted">' + (data.message || 'Runtime stopped') + '</span>';
+                tools.innerHTML = '<span class="muted">Runtime nicht verbunden</span>';
+            }
+        } catch(e) {
+            document.getElementById('runtimeDot').className = 'status-dot';
+            document.getElementById('runtimeInfo').innerHTML = '<span class="muted">Dashboard-only mode</span>';
+        }
+    }
+
+    pollRuntime();
+    setInterval(pollRuntime, 5000);
+    </script>
+</body>
+</html>

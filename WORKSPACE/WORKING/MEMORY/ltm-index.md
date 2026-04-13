@@ -1,0 +1,251 @@
+# LTM Index — MantisClaw
+
+> Long-term memory. Ingested from workpapers, decisions, architecture changes.
+
+---
+
+## Entries
+
+### 2026-04-02 | WP-005 Bootstrap MantisClaw (CLOSED)
+
+**Source:** `WORKPAPER/closed/2026-04-02-bootstrap-mantisclaw.md`  
+**Agents:** ogerly (Mensch) + LOS (Agent)
+
+**Kernentscheidungen:**
+- MantisClaw ist ein **eigenständiges Agent-Loop-Framework** mit emergenter Identität
+- Kernformel: `soul(t) = f(base, agenda.resolve(account, social, decentral), working_context)`
+- MantisClaw läuft standalone, wird in Mantis-OS zum Gehirn
+- Bootstrap über **"One File" Prinzip**: `.agent.json` → `READ-AGENT.md` → `WORKSPACE/`
+- Mantis-OS = Webstuhl-Metapher (Kette=Identität, Schuss=Agenden, Webrahmen=OS)
+
+**Architektur:**
+- `core/` — runtime.py, planner.py, executor.py, observer.py, llm.py, session.py, workpaper.py, ltm.py
+- `identity/` — base.md, agenda.md, account.md, social.md, decentral.md, hook.md, memory.md, soul.md
+- `config/` — default.yaml, .env.example
+- AAMS-Workspace vollständig: WHITEPAPER, WORKPAPER, DIARY, MEMORY, LOGS, GUIDELINES, TOOLS, AGENT-MEMORY
+
+**Abgrenzung Standalone vs. Mantis-OS:**
+- Standalone: lokale Dateien, ein Agent, ein Heartbeat
+- In Mantis-OS: mehrere Agenten, geteilte Identität, Nostr-Bridge, Plugin-Architektur
+
+**Erledigte Nächste Schritte:**
+- ✅ Repo lokal angelegt
+- ✅ GitHub Repo erstellt (DEVmatrose/MantisClaw)
+- ✅ README.md erstellt
+- ✅ MantisClaw → MantisNostr Umbenennung erledigt (bestätigt 2026-04-08)
+
+**Offene Fragen (Stand 2026-04-02):**
+- Eigenes Whitepaper-Set oder Referenz auf Mantis-OS?
+- Wissenskette standalone vs. in Mantis-OS?
+- Git Submodules vs. Copy für Integration?
+
+---
+
+### 2026-04-08 | WP-006 Session Review (OPEN)
+
+**Source:** `WORKPAPER/2026-04-08-copilot-session-review.md`  
+**Agents:** ogerly (Mensch) + GitHub Copilot (Agent)
+
+**Aktionen:**
+- WP-005 geschlossen und archiviert
+- MEMORY und DIARY initial befüllt
+- mantisagent.json erstellt
+- Statusabgleich aller offenen Punkte aus WP-005
+- Whitepaper WH-CORE erstellt (Architektur-Wahrheit)
+- Alle 8 Core-Module implementiert (waren reine Stubs)
+- **LLM-Backend: Local-first Rewrite**
+  - Default: LM Studio (localhost:1234, OpenAI-kompatibel)
+  - Zweit: Ollama (localhost:11434, REST API)
+  - Cloud: OpenAI + Anthropic optional
+  - Zero externe Dependencies — reines urllib
+  - `check_connection()` für Health-Checks
+- Erster erfolgreicher LLM-Call: `qwen3-coder-30b-a3b-instruct` via LM Studio
+- Config: backend=lmstudio, model=qwen3-coder-30b-a3b-instruct
+
+**Architektur-Entscheidung: Local-first LLM**
+- MantisClaw nutzt standardmäßig lokale LLMs (LM Studio / Ollama)
+- Kein API-Key nötig für Default-Setup
+- Kein externes Python-Package nötig (urllib statt openai/anthropic/ollama)
+- Passt zur Ethik in base.md: Souveränität, eigene Daten
+
+---
+
+## Dashboard (WP-007, 2026-04-08)
+
+**Stack:** FastAPI + Jinja2 + Vanilla JS + SQLite (aiosqlite)
+
+**Architektur:**
+- 8-Box Layout: 3-Spalten CSS Grid (Left 260px | Chat 1fr | Right 260px)
+- L1: Core (Model-Switcher), L2: Identity, L3: Workspace-Tree, L4: Active Workpaper
+- R1: Chat-History, R2: Workpapers, R3+R4: reserved
+- SSE-Streaming (EventSource → Token-by-Token Anzeige)
+- SQLite: conversations (id, title, model) + messages (id, conv_id, role, content)
+
+**Dateien:**
+- `dashboard/db.py` — CRUD, aiosqlite, `data/dashboard.db`
+- `dashboard/chat.py` — `stream_chat()` Generator, `list_lmstudio_models()`, `list_ollama_models()`
+- `dashboard/app.py` — FastAPI: 3 Page-Routes, 1 SSE-Route, 3 API-Routes, 1 DELETE
+- `dashboard/templates/index.html` — Single-Template Jinja2
+- `dashboard/static/style.css` — Dark Theme
+
+**Entscheidungen:**
+- HTMX nicht verwendet — Vanilla JS + SSE reicht für v0.1
+- Blocking urllib-Calls via `asyncio.to_thread()` / `run_in_executor()` entkoppelt
+- Chat-History persistent in SQLite (besser als Open WebUI Browser-only)
+- System-Prompt baut sich aus Identity-Dateien (soul(t)-aware)
+
+**Bekannte Lücken:**
+- `identity/base.md` nicht befüllt → Name/Owner zeigt "(not set)"
+- Kein Markdown-Rendering im Chat
+- R3/R4 Boxen leer (reserved)
+
+---
+
+### 2026-04-09 | Architektur-Vertiefung Session 1+2 (OPEN→CLOSED)
+
+**Source:** `WORKPAPER/2026-04-09-architektur-vertiefung-session2.md` + 7 weitere Workpapers  
+**Agents:** ogerly (Mensch) + GitHub Copilot (Agent)
+
+**Kernentscheidungen:**
+- **AAMS-Korrektur:** "braucht AAMS" → "AAMS fest integriert"
+- **SCIENCE:** Knowledge Validation Layer als MantisClaw-Feature (nicht AAMS-Spec). Drei Executor-Aktionen: science.research, science.validate, science.hypothesize. Quellengewichtung A/B/C/D.
+- **Procedural Memory:** GUIDELINES/ als lernbare Arbeitsweise. Observer extrahiert Lektionen → write_guidelines Tool.
+- **Reflection-Loop (RFL):** Observer→reflect()→Planner Rückkanal. Max 2 Retries, dann Eskalation. Cooldown 3 Ticks.
+- **JIT Context Loading:** 3-Stage — Always (~3k) + Agenda (~8k) + Query (~5k). Context ist jetzt Tool-Chain, nicht Core-Modul.
+
+**Whitepaper-Restrukturierung:**
+- CORE.md → v0.2.0: Nur noch Runtime/Loop (planner, executor, observer, reflect, runtime)
+- IDENTITY.md → v0.2.0: Emergente Identität, soul(t), 6 Dimensionen, Abgrenzung
+- WORKING.md → v0.2.0: AAMS Body, 5 Memory-Schichten (Working, Episodic, Semantic, Procedural, Epistemisch/SCIENCE), JIT, Wissenskette
+- TOOLS.md → v0.1.0-WIP: **Neues Whitepaper**
+
+**WH-TOOLS — Tool-Registry & Skills (v0.1.0-WIP):**
+- **Körper-Interface-Prinzip:** L3 (Loop) berührt L2 (Körper) nie direkt → nur über registrierte Tools (L4)
+- **Tool-Registry:** Whitelist in `core/registry/`, atomar, stateless, Security-Levels (read/write/execute/admin)
+- **Skills:** Orchestrierungs-Rezepte in `WORKING/TOOLS/skills/` (Markdown+YAML), Procedural Memory
+- **Schichtenmodell geschärft:** L0 (LLM) → L1 (Identity) → L2 (Body) → L3 (Loop) → L4 (Tools) → L5 (Skills) → L6 (Security) → L7 (Network)
+- **Agenda-basiertes Tool-Filtering:** Agenda bestimmt welche Tool-Kategorien sichtbar sind (always/primary/optional/excluded). ~60-70% Token-Einsparung. Integration in JIT Stage 2.
+- **Core-Refactoring:** context.py, session.py, workpaper.py, ltm.py → werden zu workspace-Tools in Registry
+
+**Analogie (Rucksack-Metapher):**
+- Gehirn = Core/Loop (denken)
+- Rucksäcke = Tool-Kategorien (workspace, memory, llm, science, nostr...)
+- Werkzeuge = Einzelne Tools (atomar, stateless)
+- Bauanleitungen = Skills (Rezepte, Workflows)
+- Körper = WORKING/ (passiv, wird über Tools bespielt)
+- Agenda bestimmt welche Rucksäcke mitgenommen werden
+
+**SCIENCE Review: MantisClaw vs. State of the Art (~80% Alignment):**
+- 10 Claims validiert, 6 Risiken, 6 Hypothesen
+- Drei Gaps identifiziert und gelöst: Procedural Memory, RFL, JIT
+- CoALA Framework Mapping: Alle 4 Memory-Typen abgedeckt
+
+**Offene Fragen (WH-TOOLS §9):**
+- F1: Skill-Generierung durch Agent (Procedural Memory in Aktion?)
+- F2: Skill-Versionierung & Lifecycle
+- F3: Tool-Kontext-Budget (~2-3k Token?)
+- F4: Verschachtelte Skills
+- F5: Context-Loading als Tool vs. Bootstrap-Sonderfall
+- F6: Core-Refactoring Tiefe (schrittweise empfohlen)
+
+**Dateien aktualisiert:**
+- README.md: Architektur-Tree, Loop-Code, Schichtenmodell, Whitepaper-Tabelle
+- AGENTS.md: Workspace-Struktur, Kernregel, Core-Module
+- READ-AGENT.md: Core-Module, GUIDELINES/TOOLS/SCIENCE Beschreibung, AAMS-Korrektur
+- LEGENDE.md: L4-L7, RFL, JIT, SCIENCE, WH-TOOLS
+
+---
+
+### 2026-04-09 | 2026-04-09-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-09-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-09T23:27:42.349224
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-10 | Whitepaper-Sync & Open Points Consolidation
+
+**Source:** Session 2026-04-10 (Whitepaper-Update + WP-Closures)
+**Agents:** ogerly (Mensch) + GitHub Copilot (Agent)
+
+**Whitepaper Updates (2026-04-10):**
+- WH-CORE: v0.2.0 → v0.3.0 — Registry-Implementierung, Dashboard §9, §4.9-4.12 ehrlicher Status, Nächste Schritte aktualisiert
+- WH-TOOLS: v0.1.0-WIP → v0.2.0 — Design vs. Implementierung synchronisiert, 8 Tools dokumentiert, Security-Levels int statt string
+- WH-WORKING: v0.2.0 → v0.3.0 — WH-TOOLS in Whitepaper-Liste, AAMS v1.3.0 Diary Reform + Version Centralization
+
+**Konsolidierte Open Points (aus 9 geschlossenen Workpapers):**
+
+1. **Dashboard:**
+   - Identity-Dateien befüllen (base.md, agenda.md — nur .example vorhanden)
+   - Markdown-Rendering im Chat
+   - Chat-Lösch-Button + Conversation-Umbenennung
+   - Runtime + Dashboard gemeinsamer Prozess-Start
+
+2. **Tool-Registry (Erweiterung):**
+   - Skill Executor (Markdown+YAML Skills parsen + ausführen)
+   - Observer-Metriken in R3 Dashboard-Sidebar
+   - Workpaper-Viewer mit Markdown-Rendering
+   - Workspace-Tools: session, workpaper, ltm, context → Migration von Core zu Registry
+
+3. **Architektur (noch nicht implementiert):**
+   - JIT Context Loading — 3-Stage Loader (Design fertig, Code fehlt)
+   - Reflection-Loop (RFL) — Observer→reflect→Planner, max 2 Retries (reflect.py ist Stub)
+   - Procedural Memory — GUIDELINES/ System (Observer extrahiert Lektionen)
+   - SCIENCE Knowledge Validation Layer (Executor-Aktionen: research, validate, hypothesize)
+
+4. **WH-TOOLS Offene Fragen (§9):**
+   - F1: Skill-Generierung durch Agent?
+   - F2: Skill-Versionierung & Lifecycle
+   - F3: Tool-Kontext-Budget (~2-3k Token?)
+   - F4: Verschachtelte Skills
+   - F5: Context-Loading als Tool vs. Bootstrap-Sonderfall
+   - F6: Core-Refactoring Tiefe
+
+---
+
+### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-10T06:00:45.305490
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-10T06:38:18.344240
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-10T06:57:15.385989
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-10T07:01:51.220877
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-10T21:02:49.696281
+
+_Workpaper auto-ingested at session close._
+
+---

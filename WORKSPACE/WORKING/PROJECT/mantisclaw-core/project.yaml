@@ -1,0 +1,51 @@
+name: "MantisClaw Core"
+slug: mantisclaw-core
+status: active
+created: "2026-04-02"
+
+scope: |
+  Autonomer Agent-Loop Framework mit emergenter Identität.
+  Core Runtime (Heartbeat, Planner, Executor, Observer, Reflector),
+  Tool Registry (9 Tools), JIT Context Loading, Skill Executor.
+  Dashboard für Monitoring und Chat-Interface.
+  AAMS-Integration (Workpapers, Whitepapers, Diary, LTM, Guidelines).
+
+goals:
+  - "Vollständiger Planungs-/Handlungs-/Reflektionszyklus"
+  - "Local-first: keine Cloud-Abhängigkeit im Default"
+  - "9+ Tools in der Registry"
+  - "Dashboard mit Runtime-Integration"
+  - "Emergente Identität durch soul(t)"
+
+milestones:
+  - name: "Bootstrap & AAMS-Struktur"
+    status: done
+    date: "2026-04-02"
+  - name: "Core Runtime Loop stabil"
+    status: done
+    date: "2026-04-08"
+  - name: "Identity & Soul(t) Berechnung"
+    status: done
+    date: "2026-04-09"
+  - name: "Tool Registry & Skills"
+    status: done
+    date: "2026-04-09"
+  - name: "Reflection Loop (RFL) validiert"
+    status: done
+    date: "2026-04-10"
+  - name: "PROJECT Layer"
+    status: in-progress
+    date: "2026-04-10"
+  - name: "Dashboard Runtime-Integration vertieft"
+    status: open
+  - name: "Multi-Agent / Social Layer"
+    status: open
+
+whitepapers:
+  - CORE.md
+  - TOOLS.md
+  - WORKING.md
+  - IDENTITY.md
+  - PROJECT.md
+
+tags: [framework, core, runtime, aams, identity]

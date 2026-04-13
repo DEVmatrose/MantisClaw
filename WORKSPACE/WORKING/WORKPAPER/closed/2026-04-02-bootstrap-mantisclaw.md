@@ -2,7 +2,8 @@
 
 **Workpaper:** WP-005  
 **Erstellt:** 2026-04-02  
-**Status:** OPEN  
+**Geschlossen:** 2026-04-08  
+**Status:** CLOSED  
 **Autor:** ogerly (Mensch) + LOS (Agent)  
 **Kontext:** Entsteht aus der Mantis-Familie-Architektur (WP-004, MANTIS-OS.md v0.2)
 

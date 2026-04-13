@@ -42,9 +42,11 @@ WORKSPACE/
     │   └── closed/     ← archived sessions
     ├── DIARY/          ← chronological decision log (monthly)
     ├── MEMORY/         ← long-term context index
-    ├── GUIDELINES/     ← coding standards
+    ├── GUIDELINES/     ← procedural memory (learnable work patterns)
+    ├── SCIENCE/        ← knowledge validation layer
     ├── LOGS/           ← audit trail
-    └── TOOLS/          ← project-specific scripts
+    └── TOOLS/          ← skills (orchestration recipes)
+        └── skills/     ← Markdown+YAML workflows
 ```
 
 ---
@@ -61,8 +63,10 @@ soul(t) = f(base, agenda.resolve(account, social, decentral), working_context)
 The Soul is not static — it emerges from the current context. A coding agent has a different soul than a trading agent, but both share the same `base.md`.
 
 **Structure:**
-- `core/` — The brain (runtime, planner, executor, observer)
+- `core/` — The brain: Loop (runtime, planner, executor, observer, reflect) + Registry (tools)
 - `identity/` — Emergent identity (base, agenda, accounts, social, decentral)
-- `WORKSPACE/` — AAMS body (whitepapers, workpapers, LTM)
+- `WORKSPACE/` — AAMS body (whitepapers, workpapers, LTM, guidelines, SCIENCE, skills)
+
+**Kernregel:** L3 (Loop) berührt L2 (Körper) nie direkt — jeder Zugriff über registrierte Tools (L4).
 
 **Eigenständig:** MantisClaw läuft standalone, benötigt aber AAMS für agentisches Arbeiten.
