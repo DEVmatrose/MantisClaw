@@ -4,42 +4,61 @@ status: active
 created: "2026-04-02"
 
 scope: |
-  Autonomer Agent-Loop Framework mit emergenter Identität.
+  Autonomous agent-loop framework with emergent identity.
   Core Runtime (Heartbeat, Planner, Executor, Observer, Reflector),
-  Tool Registry (9 Tools), JIT Context Loading, Skill Executor.
-  Dashboard für Monitoring und Chat-Interface.
-  AAMS-Integration (Workpapers, Whitepapers, Diary, LTM, Guidelines).
+  Tool Registry, JIT Context Loading, Skill Executor.
+  Dashboard for monitoring and chat interface.
+  AAMS integration (Workpapers, Whitepapers, Diary, LTM, Guidelines).
 
 goals:
-  - "Vollständiger Planungs-/Handlungs-/Reflektionszyklus"
-  - "Local-first: keine Cloud-Abhängigkeit im Default"
-  - "9+ Tools in der Registry"
-  - "Dashboard mit Runtime-Integration"
-  - "Emergente Identität durch soul(t)"
+  - "Complete plan/act/reflect cycle"
+  - "Local-first: no cloud dependency by default"
+  - "Extensible tool registry"
+  - "Dashboard with runtime integration"
+  - "Emergent identity via soul(t)"
 
 milestones:
-  - name: "Bootstrap & AAMS-Struktur"
+  - name: "Bootstrap & AAMS Structure"
     status: done
     date: "2026-04-02"
-  - name: "Core Runtime Loop stabil"
+  - name: "Core Runtime Loop"
     status: done
     date: "2026-04-08"
-  - name: "Identity & Soul(t) Berechnung"
+  - name: "PROJECT Layer"
+    status: done
+    date: "2026-04-10"
+  - name: "Identity & Soul(t)"
     status: done
     date: "2026-04-09"
   - name: "Tool Registry & Skills"
     status: done
     date: "2026-04-09"
-  - name: "Reflection Loop (RFL) validiert"
+  - name: "Reflection Loop (RFL)"
     status: done
     date: "2026-04-10"
-  - name: "PROJECT Layer"
+  - name: "Dashboard Runtime Integration"
+    status: done
+    date: "2026-04-13"
+  - name: "Runtime Efficiency (Token-Limits, Path-Fix, Idle Detection)"
+    status: done
+    date: "2026-04-13"
+  - name: "Loop Monitor Tool (first project tool)"
+    status: done
+    date: "2026-04-13"
+  - name: "Project-Scoped AAMS"
     status: in-progress
-    date: "2026-04-10"
-  - name: "Dashboard Runtime-Integration vertieft"
-    status: open
+    date: "2026-04-13"
   - name: "Multi-Agent / Social Layer"
     status: open
+
+tools:
+  - name: loop_monitor
+    description: "Runtime-Loop Health Check + Token-Monitoring"
+    file: core/registry/tools/loop_monitor.py
+    skill: WORKING/TOOLS/skills/loop_monitor.md
+  - name: token_budget
+    description: "Token-Budget Übersicht und Empfehlungen"
+    file: core/registry/tools/loop_monitor.py
 
 whitepapers:
   - CORE.md

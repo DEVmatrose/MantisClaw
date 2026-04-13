@@ -155,11 +155,17 @@ class LLMBackend:
 
         return resp["content"][0]["text"]
 
-    async def complete_simple(self, prompt: str, system: str | None = None) -> str:
-        return await self.complete(
-            messages=[{"role": "user", "content": prompt}],
-            system=system,
-        )
+    async def complete_simple(self, prompt: str, system: str | None = None, max_tokens: int | None = None) -> str:
+        old_max = self.max_tokens
+        if max_tokens is not None:
+            self.max_tokens = max_tokens
+        try:
+            return await self.complete(
+                messages=[{"role": "user", "content": prompt}],
+                system=system,
+            )
+        finally:
+            self.max_tokens = old_max
 
     def check_connection(self) -> bool:
         """Prüft ob das Backend erreichbar ist."""

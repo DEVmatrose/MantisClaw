@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MantisClaw — Autonomous Agent Loop Framework</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #07090d;
+    --surface:   #0d1117;
+    --panel:     #111820;
+    --border:    #1a2520;
+    --green:     #4afa6e;
+    --green-dim: #2a6a38;
+    --green-glow:rgba(74,250,110,0.14);
+    --teal:      #00d4aa;
+    --amber:     #f5a623;
+    --rose:      #ff6b8a;
+    --text:      #c8dcc8;
+    --muted:     #4d6a4d;
+    --code-bg:   #080f0b;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: .6;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative; min-height: 100vh;
+    display: grid; place-items: center;
+    padding: 80px 32px 64px; overflow: hidden;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, black 20%, transparent 100%);
+    opacity: .6;
+  }
+  .hero-glow {
+    position: absolute; top: -160px; left: 50%; transform: translateX(-50%);
+    width: 1100px; height: 700px;
+    background: radial-gradient(ellipse, rgba(74,250,110,0.06) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.03) 3px, rgba(0,0,0,.03) 4px);
+    pointer-events: none;
+  }
+  .hero-inner { position: relative; z-index: 1; max-width: 880px; text-align: center; }
+
+  .badge-row {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    margin-bottom: 28px; animation: fadeUp .55s ease both;
+  }
+  .badge {
+    font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; padding: 4px 11px; border-radius: 2px;
+    border: 1px solid var(--green-dim); color: var(--green); background: rgba(74,250,110,0.05);
+  }
+  .badge.amber { border-color: #6a4200; color: var(--amber); background: rgba(245,166,35,.05); }
+  .badge.teal  { border-color: #004a3a; color: var(--teal);  background: rgba(0,212,170,.05); }
+
+  h1 {
+    font-size: clamp(44px, 9vw, 92px); font-weight: 800; line-height: .93;
+    letter-spacing: -.03em; color: #fff; animation: fadeUp .65s .08s ease both;
+  }
+  h1 span { color: var(--green); }
+  .tagline {
+    margin-top: 18px; font-size: clamp(13px, 2vw, 17px); color: var(--muted);
+    font-weight: 400; letter-spacing: .06em; text-transform: uppercase;
+    animation: fadeUp .65s .16s ease both;
+  }
+  .soul-formula {
+    margin: 36px auto 0; max-width: 640px; background: var(--code-bg);
+    border: 1px solid var(--green-dim); border-left: 3px solid var(--green);
+    border-radius: 4px; padding: 18px 24px;
+    font-family: 'Space Mono', monospace; font-size: clamp(10px, 1.8vw, 13px);
+    color: var(--green); text-align: left; animation: fadeUp .65s .24s ease both;
+  }
+  .soul-label {
+    display: block; font-size: 9px; color: var(--muted);
+    letter-spacing: .14em; text-transform: uppercase; margin-top: 8px;
+  }
+  .cta-row {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    margin-top: 38px; animation: fadeUp .65s .32s ease both;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; padding: 11px 22px; border-radius: 3px;
+    cursor: pointer; text-decoration: none; transition: all .2s;
+  }
+  .btn-primary { background: var(--green); color: #07090d; border: none; font-weight: 700; }
+  .btn-primary:hover { background: #70fb87; box-shadow: 0 0 28px rgba(74,250,110,.35); }
+  .btn-ghost { background: transparent; color: var(--green); border: 1px solid var(--green-dim); }
+  .btn-ghost:hover { border-color: var(--green); background: var(--green-glow); }
+
+  /* LAYOUT */
+  section { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 72px 32px; }
+  .section-label {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    letter-spacing: .2em; color: var(--green); text-transform: uppercase; margin-bottom: 10px;
+  }
+  h2 { font-size: clamp(26px, 4vw, 40px); font-weight: 800; color: #fff; letter-spacing: -.02em; margin-bottom: 44px; }
+  .divider {
+    max-width: 1100px; margin: 0 auto; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border) 25%, var(--border) 75%, transparent);
+  }
+
+  /* ARCH GRID */
+  .arch-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; }
+  .arch-card {
+    background: var(--panel); border: 1px solid var(--border); padding: 26px 22px 30px;
+    position: relative; overflow: hidden; transition: border-color .25s, transform .25s;
+  }
+  .arch-card:hover { border-color: var(--green-dim); transform: translateY(-3px); }
+  .arch-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; opacity: 0; transition: opacity .25s;
+  }
+  .arch-card:hover::before { opacity: 1; }
+  .c1::before { background: var(--green); }
+  .c2::before { background: var(--teal); }
+  .c3::before { background: var(--amber); }
+  .arch-title { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .c1 .arch-title { color: var(--green); } .c2 .arch-title { color: var(--teal); } .c3 .arch-title { color: var(--amber); }
+  .arch-sub { font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 18px; }
+  .arch-files { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .arch-files li { font-family: 'Space Mono', monospace; font-size: 11.5px; color: var(--text); display: flex; align-items: center; gap: 7px; }
+  .arch-files li::before { content: '›'; font-size: 15px; line-height: 1; }
+  .c1 .arch-files li::before { color: var(--green); } .c2 .arch-files li::before { color: var(--teal); } .c3 .arch-files li::before { color: var(--amber); }
+  .arch-files li.dim { color: var(--muted); }
+
+  /* LAYERS */
+  .layers-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 2px; }
+  .layer-card {
+    background: var(--panel); border: 1px solid var(--border); padding: 18px 14px 20px;
+    text-align: center; transition: border-color .2s, transform .2s;
+  }
+  .layer-card:hover { border-color: var(--green-dim); transform: translateY(-2px); }
+  .layer-num { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 10px; }
+  .layer-name { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .layer-desc { font-family: 'Space Mono', monospace; font-size: 9.5px; color: var(--muted); line-height: 1.5; }
+  .l0 .layer-num { color: #555; } .l1 .layer-num { color: var(--teal); } .l2 .layer-num { color: var(--amber); }
+  .l3 .layer-num { color: var(--green); } .l4 .layer-num { color: #9d7fff; } .l5 .layer-num { color: var(--rose); }
+
+  /* LOOP */
+  .loop-wrap { display: grid; grid-template-columns: 248px 1fr; gap: 28px; align-items: start; }
+  .loop-steps { display: flex; flex-direction: column; }
+  .loop-step {
+    display: flex; align-items: flex-start; gap: 12px; padding: 14px 0 14px 20px;
+    border-left: 2px solid var(--border); position: relative; transition: border-color .2s;
+  }
+  .loop-step:hover { border-color: var(--green-dim); }
+  .loop-step::before {
+    content: ''; position: absolute; left: -6px; top: 20px; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--border); border: 2px solid var(--panel);
+    transition: background .2s, box-shadow .2s;
+  }
+  .loop-step:hover::before { background: var(--green); box-shadow: 0 0 10px rgba(74,250,110,.45); }
+  .loop-badge {
+    font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700;
+    padding: 3px 7px; border-radius: 2px; flex-shrink: 0; margin-top: 2px; white-space: nowrap;
+  }
+  .lb-green { background: rgba(74,250,110,.12); color: var(--green); border: 1px solid var(--green-dim); }
+  .lb-teal  { background: rgba(0,212,170,.12);  color: var(--teal);  border: 1px solid #004a3a; }
+  .lb-amber { background: rgba(245,166,35,.12); color: var(--amber); border: 1px solid #6a4200; }
+  .lb-gray  { background: rgba(255,255,255,.05); color: #777; border: 1px solid #252525; }
+  .loop-text { font-size: 13px; color: var(--text); padding-top: 2px; line-height: 1.5; }
+  .loop-text small { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; font-family: 'Space Mono', monospace; }
+
+  /* CODE */
+  .code-block {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; font-family: 'Space Mono', monospace; font-size: clamp(9.5px, 1.4vw, 12.5px); line-height: 1.75;
+  }
+  .code-header {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 10px 16px; display: flex; align-items: center; gap: 7px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dr { background: #ff5f57; } .dy { background: #febc2e; } .dg { background: #28c840; }
+  .code-filename { font-size: 10px; color: var(--muted); letter-spacing: .1em; margin-left: 4px; }
+  .code-body { padding: 20px 24px; }
+  .kw { color: #ff79c6; } .fn { color: #50fa7b; } .var { color: #8be9fd; }
+  .str { color: #f1fa8c; } .cmt { color: var(--muted); font-style: italic; }
+
+  /* MEMORY */
+  .mem-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; }
+  .mem-card {
+    background: var(--panel); border: 1px solid var(--border); padding: 20px 18px;
+    transition: border-color .2s, transform .2s;
+  }
+  .mem-card:hover { border-color: var(--green-dim); transform: translateY(-2px); }
+  .mem-folder { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--green); font-weight: 700; margin-bottom: 4px; }
+  .mem-type { font-size: 9.5px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
+  .mem-q { font-size: 12.5px; color: var(--text); font-style: italic; }
+  .mem-note { display: block; font-size: 10.5px; color: var(--muted); margin-top: 4px; font-family: 'Space Mono', monospace; font-style: normal; }
+
+  /* QUICKSTART */
+  .qs-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 2px; }
+  .qs-card { background: var(--panel); border: 1px solid var(--border); padding: 24px 20px; }
+  .qs-num { font-family: 'Space Mono', monospace; font-size: 40px; font-weight: 700; color: var(--border); line-height: 1; margin-bottom: 10px; letter-spacing: -.04em; }
+  .qs-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 14px; }
+  .qs-cmd {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 3px;
+    padding: 8px 12px; font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--green); margin-bottom: 6px; display: block; white-space: pre-wrap; word-break: break-all;
+  }
+  .qs-note { font-size: 10px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+  /* DASHBOARD */
+  .dash-wrap { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 2px; }
+  .dash-panel { background: var(--panel); border: 1px solid var(--border); padding: 20px 18px; }
+  .dash-panel-title {
+    font-family: 'Space Mono', monospace; font-size: 9.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--green); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .dash-item { font-size: 12px; color: var(--text); padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .dash-item:last-child { border: none; }
+  .dash-chat { background: var(--code-bg); border-radius: 4px; padding: 14px; font-family: 'Space Mono', monospace; font-size: 10.5px; color: var(--muted); line-height: 1.8; }
+  .dash-bubble.agent { color: var(--green); }
+
+  /* MANTIS-OS */
+  .os-wrap { display: flex; align-items: stretch; border: 1px solid var(--border); }
+  .os-box { flex: 1; padding: 24px 28px; border-right: 1px solid var(--border); }
+  .os-box:last-child { border: none; background: var(--panel); }
+  .os-box-label { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .os-box-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .os-box-desc { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+  .os-sep { padding: 0 8px; display: flex; align-items: center; color: var(--green); font-size: 24px; flex-shrink: 0; background: var(--bg); border-right: 1px solid var(--border); }
+
+  /* FOOTER */
+  footer { position: relative; z-index: 1; text-align: center; padding: 44px 32px 56px; border-top: 1px solid var(--border); max-width: 1100px; margin: 0 auto; }
+  .footer-name { font-size: clamp(30px, 6vw, 52px); font-weight: 800; color: var(--border); letter-spacing: -.03em; margin-bottom: 14px; }
+  .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+  .footer-links a { color: var(--muted); text-decoration: none; transition: color .2s; }
+  .footer-links a:hover { color: var(--green); }
+
+  /* ANIM */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .55s ease, transform .55s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* RESPONSIVE */
+  @media (max-width: 960px) {
+    .arch-grid, .mem-grid { grid-template-columns: repeat(2,1fr); }
+    .layers-grid { grid-template-columns: repeat(3,1fr); }
+    .qs-grid { grid-template-columns: repeat(2,1fr); }
+    .loop-wrap, .dash-wrap { grid-template-columns: 1fr; }
+    .os-wrap { flex-direction: column; }
+    .os-sep { display: none; }
+    .os-box { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+  @media (max-width: 540px) {
+    .arch-grid, .layers-grid, .mem-grid, .qs-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-inner">
+    <div class="badge-row">
+      <span class="badge">v0.1.0</span>
+      <span class="badge amber">In Entwicklung</span>
+      <span class="badge teal">MIT Lizenz</span>
+      <span class="badge">Teil der Mantis-Familie</span>
+      <span class="badge">AAMS v1.3.0</span>
+    </div>
+    <h1>Mantis<span>Claw</span></h1>
+    <p class="tagline">Autonomous Agent Loop Framework — local-first, emergent identity</p>
+    <div class="soul-formula">
+      soul(t) = <span style="color:#00d4aa">f</span>(<span style="color:#8be9fd">base</span>, agenda.<span style="color:#50fa7b">resolve</span>(<span style="color:#f1fa8c">account</span>, <span style="color:#f1fa8c">social</span>, <span style="color:#f1fa8c">decentral</span>), <span style="color:#8be9fd">working_context</span>)
+      <span class="soul-label">Emergente Soul-Berechnung — nie geschrieben, bei jedem Tick neu berechnet</span>
+    </div>
+    <div class="cta-row">
+      <a href="https://github.com/DEVmatrose/MantisClaw" class="btn btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        GitHub öffnen
+      </a>
+      <a href="https://github.com/DEVmatrose/AAMS" class="btn btn-ghost">AAMS Standard</a>
+      <a href="https://github.com/DEVmatrose/Mantis-OS" class="btn btn-ghost">Mantis-OS</a>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHITEKTUR -->
+<section class="reveal">
+  <div class="section-label">// Architektur</div>
+  <h2>Drei Schichten. Ein Bewusstsein.</h2>
+  <div class="arch-grid">
+    <div class="arch-card c1">
+      <div class="arch-title">core/</div>
+      <div class="arch-sub">Gehirn &amp; Loop — L3</div>
+      <ul class="arch-files">
+        <li>runtime.py</li>
+        <li>planner.py</li>
+        <li>executor.py</li>
+        <li>observer.py</li>
+        <li>reflect.py</li>
+        <li>context.py</li>
+        <li>skill_executor.py</li>
+        <li class="dim">llm.py · session.py · ltm.py</li>
+        <li class="dim">registry/ → tools/</li>
+      </ul>
+    </div>
+    <div class="arch-card c2">
+      <div class="arch-title">identity/</div>
+      <div class="arch-sub">Emergente Identität — L1</div>
+      <ul class="arch-files">
+        <li>base.md</li>
+        <li>agenda.md</li>
+        <li>account.md</li>
+        <li>social.md</li>
+        <li>decentral.md</li>
+        <li>hook.md</li>
+      </ul>
+    </div>
+    <div class="arch-card c3">
+      <div class="arch-title">WORKSPACE/WORKING/</div>
+      <div class="arch-sub">AAMS Body — L2</div>
+      <ul class="arch-files">
+        <li>PROJECT/</li>
+        <li>WORKPAPER/</li>
+        <li>WHITEPAPER/</li>
+        <li>MEMORY/ · DIARY/</li>
+        <li>GUIDELINES/</li>
+        <li>SCIENCE/</li>
+        <li class="dim">LOGS/ · TOOLS/skills/</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SCHICHTENMODELL -->
+<section class="reveal">
+  <div class="section-label">// Schichtenmodell</div>
+  <h2>L0 – L5: Jede Schicht hat eine Aufgabe.</h2>
+  <div class="layers-grid">
+    <div class="layer-card l0">
+      <div class="layer-num">L0</div>
+      <div class="layer-name">LLM Backend</div>
+      <div class="layer-desc">core/llm.py<br>LM Studio · Ollama<br>Cloud optional</div>
+    </div>
+    <div class="layer-card l1">
+      <div class="layer-num">L1</div>
+      <div class="layer-name">Identity</div>
+      <div class="layer-desc">identity/<br>soul(t) Berechnung</div>
+    </div>
+    <div class="layer-card l2">
+      <div class="layer-num">L2</div>
+      <div class="layer-name">AAMS Body</div>
+      <div class="layer-desc">WORKING/<br>passiv — nur über Tools</div>
+    </div>
+    <div class="layer-card l3">
+      <div class="layer-num">L3</div>
+      <div class="layer-name">Runtime / Loop</div>
+      <div class="layer-desc">planner · executor<br>observer · reflect</div>
+    </div>
+    <div class="layer-card l4">
+      <div class="layer-num">L4</div>
+      <div class="layer-name">Tool Registry</div>
+      <div class="layer-desc">core/registry/<br>Whitelist · Fuzzy-Resolve</div>
+    </div>
+    <div class="layer-card l5">
+      <div class="layer-num">L5</div>
+      <div class="layer-name">Security</div>
+      <div class="layer-desc">Querschnitt<br>Security-Level pro Tool</div>
+    </div>
+  </div>
+  <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-top:16px;padding:12px 16px;border-left:2px solid var(--border);">
+    Kernregel: L3 (Loop) berührt L2 (Körper) <strong style="color:var(--text)">nie direkt</strong> — jeder Zugriff auf WORKING/ läuft über ein registriertes Tool in L4.
+  </p>
+</section>
+
+<div class="divider"></div>
+
+<!-- DER LOOP -->
+<section class="reveal">
+  <div class="section-label">// Der Loop</div>
+  <h2>tick() — Das Herzstück</h2>
+  <div class="loop-wrap">
+    <div class="loop-steps">
+      <div class="loop-step">
+        <span class="loop-badge lb-teal">L1</span>
+        <span class="loop-text">Identity &amp; Soul berechnen
+          <small>compute_soul(base, agenda, accounts, social, decentral)</small></span>
+      </div>
+      <div class="loop-step">
+        <span class="loop-badge lb-amber">L4</span>
+        <span class="loop-text">JIT Context Loading (3-Stage)
+          <small>always ~3k · agenda ~8k · query on-demand ~5k</small></span>
+      </div>
+      <div class="loop-step">
+        <span class="loop-badge lb-green">L3</span>
+        <span class="loop-text">Planen
+          <small>planner(soul_t, hooks, memory, guidelines)</small></span>
+      </div>
+      <div class="loop-step">
+        <span class="loop-badge lb-green">L3</span>
+        <span class="loop-text">Handeln — Tool oder Skill
+          <small>executor(plan) · skill_executor(plan.skill, context)</small></span>
+      </div>
+      <div class="loop-step">
+        <span class="loop-badge lb-green">L3</span>
+        <span class="loop-text">Beobachten
+          <small>observer(results, diary, guidelines)</small></span>
+      </div>
+      <div class="loop-step">
+        <span class="loop-badge lb-gray">RFL</span>
+        <span class="loop-text">Reflexion &amp; Revision
+          <small>reflect(assessment) → planner.revise() → zweiter Versuch</small></span>
+      </div>
+      <div class="loop-step">
+        <span class="loop-badge lb-amber">L2</span>
+        <span class="loop-text">LTM &amp; Guidelines aktualisieren
+          <small>observer.extract_lessons() → GUIDELINES/ · ltm_update()</small></span>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="dot dr"></span><span class="dot dy"></span><span class="dot dg"></span>
+        <span class="code-filename">core/runtime.py — async def tick()</span>
+      </div>
+      <div class="code-body">
+        <span class="cmt"># L1 — Identity &amp; Soul</span><br>
+        <span class="var">soul_t</span> = <span class="fn">compute_soul</span>(base, agenda, accounts, social, decentral)<br><br>
+        <span class="cmt"># L4 — JIT Context Loading (3-Stage)</span><br>
+        registry.<span class="fn">execute</span>(<span class="str">"load_context_always"</span>, {})<br>
+        registry.<span class="fn">execute</span>(<span class="str">"load_context_agenda"</span>, {agenda})<br><br>
+        <span class="cmt"># L3 — Denken</span><br>
+        <span class="var">hooks</span>      = <span class="fn">load</span>(<span class="str">"identity/hook.md"</span>)<br>
+        <span class="var">guidelines</span> = registry.<span class="fn">execute</span>(<span class="str">"read_guidelines"</span>, {task_type})<br>
+        <span class="var">plan</span>       = <span class="fn">planner</span>(<span class="var">soul_t</span>, <span class="var">hooks</span>, <span class="var">memory</span>, <span class="var">guidelines</span>)<br><br>
+        <span class="cmt"># L3 — Handeln (Tool oder Skill)</span><br>
+        <span class="kw">if</span> <span class="var">plan</span>.type == <span class="str">"skill"</span>:<br>
+        &nbsp;&nbsp;<span class="var">results</span> = skill_executor.<span class="fn">execute</span>(<span class="var">plan</span>.skill, <span class="var">context</span>)<br>
+        <span class="kw">else</span>:<br>
+        &nbsp;&nbsp;<span class="var">results</span> = registry.<span class="fn">execute</span>(<span class="var">plan</span>.tool, <span class="var">plan</span>.params)<br><br>
+        <span class="cmt"># L3 — Beobachten</span><br>
+        <span class="var">assessment</span> = <span class="fn">observer</span>(<span class="var">results</span>, <span class="var">diary</span>, <span class="var">guidelines</span>)<br><br>
+        <span class="cmt"># RFL — Reflexion &amp; Selbstkorrektur</span><br>
+        <span class="kw">if</span> <span class="var">assessment</span>.needs_revision:<br>
+        &nbsp;&nbsp;<span class="var">reflection</span> = <span class="fn">reflect</span>(<span class="var">assessment</span>, <span class="var">results</span>, <span class="var">plan</span>)<br>
+        &nbsp;&nbsp;<span class="var">plan</span> = planner.<span class="fn">revise</span>(<span class="var">soul_t</span>, <span class="var">reflection</span>)<br>
+        &nbsp;&nbsp;<span class="var">results</span> = <span class="fn">executor</span>(<span class="var">plan</span>)<span class="cmt">  # Zweiter Versuch</span><br><br>
+        <span class="cmt"># L2 — Procedural Memory + LTM</span><br>
+        observer.<span class="fn">extract_lessons</span>(<span class="var">results</span>)<span class="cmt">  # → GUIDELINES/</span><br>
+        <span class="fn">ltm_update</span>(<span class="var">results</span>, <span class="var">assessment</span>)
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- MEMORY SYSTEM -->
+<section class="reveal">
+  <div class="section-label">// Working System — AAMS v1.3.0</div>
+  <h2>Acht Memory-Schichten. Epistemische Hygiene.</h2>
+  <div class="mem-grid">
+    <div class="mem-card">
+      <div class="mem-folder">PROJECT/</div>
+      <div class="mem-type">Strategic Memory</div>
+      <div class="mem-q">Woran arbeite ich?<span class="mem-note">Scope · Goals · Milestones<br>_active.yaml → max 1 aktiv</span></div>
+    </div>
+    <div class="mem-card">
+      <div class="mem-folder">WORKPAPER/</div>
+      <div class="mem-type">Working Memory</div>
+      <div class="mem-q">Was tue ich jetzt?<span class="mem-note">Eine Datei pro Session<br>open → work → close → archived</span></div>
+    </div>
+    <div class="mem-card">
+      <div class="mem-folder">WHITEPAPER/</div>
+      <div class="mem-type">Semantic Memory (stabil)</div>
+      <div class="mem-q">Wie ist das System aufgebaut?<span class="mem-note">CORE · IDENTITY · WORKING · TOOLS</span></div>
+    </div>
+    <div class="mem-card">
+      <div class="mem-folder">MEMORY / LTM</div>
+      <div class="mem-type">Semantic Memory (gelernt)</div>
+      <div class="mem-q">Was haben wir gelernt?<span class="mem-note">ltm-index.md · optional ChromaDB<br>ingestiert aus geschlossenen WPs</span></div>
+    </div>
+    <div class="mem-card">
+      <div class="mem-folder">DIARY/</div>
+      <div class="mem-type">Temporal Index</div>
+      <div class="mem-q">Wann wurde was angefasst?<span class="mem-note">Pointer-only · max 3 Einträge/Tag<br>YYYY-MM.md monatliche Dateien</span></div>
+    </div>
+    <div class="mem-card">
+      <div class="mem-folder">GUIDELINES/</div>
+      <div class="mem-type">Procedural Memory</div>
+      <div class="mem-q">Wie arbeite ich am besten?<span class="mem-note">Observer extrahiert Lektionen<br>wächst mit jeder Session</span></div>
+    </div>
+    <div class="mem-card">
+      <div class="mem-folder">SCIENCE/</div>
+      <div class="mem-type">Epistemisch</div>
+      <div class="mem-q">Stimmt das? Wo stehen wir?<span class="mem-note">research · validate · hypothesize<br>Eigene Lösung vs. State-of-the-Art</span></div>
+    </div>
+    <div class="mem-card">
+      <div class="mem-folder">TOOLS/skills/</div>
+      <div class="mem-type">Skill-Orchestrierung — L5</div>
+      <div class="mem-q">Wie kombiniere ich Tools?<span class="mem-note">Markdown + YAML Workflows<br>multi-step Prozesse als Skill</span></div>
+    </div>
+  </div>
+  <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-top:16px;padding:12px 16px;border-left:2px solid var(--border);">
+    Wissenskette (strikt): <strong style="color:var(--text)">Workpaper → Whitepaper → LTM</strong> — flüchtige Ideen werden erst Architektur, dann Langzeitgedächtnis. Whitepaper &gt; Guideline bei Konflikt.
+  </p>
+</section>
+
+<div class="divider"></div>
+
+<!-- DASHBOARD -->
+<section class="reveal">
+  <div class="section-label">// Web Dashboard</div>
+  <h2>localhost:8080 — Echtzeit-Einblick in den Agenten.</h2>
+  <div class="dash-wrap">
+    <div class="dash-panel">
+      <div class="dash-panel-title">Links — Runtime Status</div>
+      <div class="dash-item">Runtime-Status &amp; Health</div>
+      <div class="dash-item">Identity / soul(t)</div>
+      <div class="dash-item">Workspace-Baum</div>
+      <div class="dash-item">Aktives Workpaper</div>
+      <div class="dash-item">Aktives Projekt</div>
+    </div>
+    <div class="dash-panel" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="dash-panel-title">Mitte — Chat mit dem Agenten (SSE Token-Streaming)</div>
+      <div class="dash-chat">
+        <div class="dash-bubble">User &gt; Was ist der aktuelle Plan?</div>
+        <div class="dash-bubble agent">Agent &gt; Tick 42 · Agenda: Coding<br>&nbsp;soul(t) berechnet · Plan: 3 Steps<br>&nbsp;Step 1: read_file core/planner.py ▋</div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);">Token-by-Token via SSE · Model-Switcher: LM Studio ↔ Ollama live wechselbar</div>
+    </div>
+    <div class="dash-panel">
+      <div class="dash-panel-title">Rechts — History</div>
+      <div class="dash-item">Chat-History</div>
+      <div class="dash-item">Offene Workpapers</div>
+      <div class="dash-item" style="color:var(--muted)">(reserved)</div>
+      <div class="dash-item" style="color:var(--muted)">(reserved)</div>
+    </div>
+  </div>
+  <div style="margin-top:12px;">
+    <code style="display:inline-block;font-family:'Space Mono',monospace;font-size:11px;color:var(--green);background:var(--code-bg);border:1px solid var(--border);padding:8px 16px;border-radius:3px;">uvicorn dashboard.app:app --reload --port 8080</code>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- QUICKSTART -->
+<section class="reveal">
+  <div class="section-label">// Quick Start</div>
+  <h2>In fünf Schritten zum laufenden Agenten.</h2>
+  <div class="qs-grid">
+    <div class="qs-card">
+      <div class="qs-num">01</div>
+      <div class="qs-title">Repo klonen</div>
+      <code class="qs-cmd">git clone https://github.com/DEVmatrose/MantisClaw
+cd MantisClaw</code>
+    </div>
+    <div class="qs-card">
+      <div class="qs-num">02</div>
+      <div class="qs-title">Virtualenv</div>
+      <code class="qs-cmd">python -m venv .venv
+source .venv/bin/activate</code>
+      <code class="qs-cmd">pip install -r requirements.txt</code>
+    </div>
+    <div class="qs-card">
+      <div class="qs-num">03</div>
+      <div class="qs-title">Konfiguration</div>
+      <code class="qs-cmd">cp config/.env.example .env</code>
+      <p class="qs-note">LLM_BACKEND=lmstudio (default) oder ollama<br>Optional: OPENAI_API_KEY, ANTHROPIC_API_KEY</p>
+    </div>
+    <div class="qs-card">
+      <div class="qs-num">04</div>
+      <div class="qs-title">Identität einrichten</div>
+      <code class="qs-cmd">cp identity/base.md.example identity/base.md
+cp identity/agenda.md.example identity/agenda.md</code>
+      <p class="qs-note">Optional: account, social, decentral, hook</p>
+    </div>
+    <div class="qs-card">
+      <div class="qs-num">05</div>
+      <div class="qs-title">LLM &amp; Agent starten</div>
+      <code class="qs-cmd"># LM Studio: Server auf :1234
+# oder Ollama:
+ollama serve
+ollama run qwen3-coder</code>
+      <code class="qs-cmd">python -m core.runtime</code>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- MANTIS-OS -->
+<section class="reveal">
+  <div class="section-label">// Integration</div>
+  <h2>Standalone oder Teil von Mantis-OS.</h2>
+  <div class="os-wrap">
+    <div class="os-box">
+      <div class="os-box-label">Standalone</div>
+      <div class="os-box-title">MantisClaw</div>
+      <div class="os-box-desc">Gehirn + Identität + AAMS Body. Einzelnes Repo, eigenständig lauffähig. Local-first, kein Cloud-Zwang. Der Code ist identisch mit MantisClaw in Mantis-OS.</div>
+    </div>
+    <div class="os-sep">+</div>
+    <div class="os-box">
+      <div class="os-box-label">Optional</div>
+      <div class="os-box-title">MantisNostr</div>
+      <div class="os-box-desc">Mesh-Netzwerk Layer. L6 Network. Agenten kommunizieren über das Nostr-Protokoll in einem dezentralen Mesh.</div>
+    </div>
+    <div class="os-sep">=</div>
+    <div class="os-box">
+      <div class="os-box-label" style="color:var(--green)">Vollständiger Knoten</div>
+      <div class="os-box-title">Mantis-OS</div>
+      <div class="os-box-desc">Autonomes Agenten-Betriebssystem. MantisClaw als Gehirn, MantisNostr als Nervensystem. Nur die Integration unterscheidet sich.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="reveal">
+  <div class="footer-name">MantisClaw</div>
+  <div class="footer-links">
+    <a href="https://github.com/DEVmatrose/MantisClaw">github.com/DEVmatrose/MantisClaw</a>
+    <span style="color:var(--border)">·</span>
+    <a href="https://github.com/DEVmatrose/AAMS">AAMS Standard</a>
+    <span style="color:var(--border)">·</span>
+    <a href="https://github.com/DEVmatrose/Mantis-OS">Mantis-OS</a>
+    <span style="color:var(--border)">·</span>
+    <a href="https://github.com/ogerly">@ogerly</a>
+    <span style="color:var(--border)">·</span>
+    <a href="https://github.com/DEVmatrose">@DEVmatrose</a>
+    <span style="color:var(--border)">·</span>
+    <span>MIT License</span>
+  </div>
+</footer>
+
+<script>
+  const obs = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+    { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+  );
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

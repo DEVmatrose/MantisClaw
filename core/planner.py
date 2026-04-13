@@ -4,10 +4,38 @@ Planner — nimmt soul(t) + hooks + memory → erzeugt einen Plan.
 Ein Plan ist eine Liste von Steps.
 """
 
+import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 
 logger = logging.getLogger("mantisclaw.planner")
+
+# Prompt log path — writable from runtime process
+_PROMPT_LOG: Path | None = None
+
+
+def set_prompt_log_path(path: Path) -> None:
+    global _PROMPT_LOG
+    _PROMPT_LOG = path
+
+
+def _log_prompt(system: str, user: str, response: str) -> None:
+    if not _PROMPT_LOG:
+        return
+    try:
+        _PROMPT_LOG.parent.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "system": system,
+            "user": user,
+            "response": response,
+        }
+        with open(_PROMPT_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception as e:
+        logger.warning(f"Prompt logging failed: {e}")
 
 
 @dataclass
@@ -43,7 +71,8 @@ class Planner:
         system_prompt = self._build_system_prompt(soul)
         user_prompt = self._build_user_prompt(hooks, memory_context)
 
-        response = await self.llm.complete_simple(user_prompt, system=system_prompt)
+        response = await self.llm.complete_simple(user_prompt, system=system_prompt, max_tokens=500)
+        _log_prompt(system_prompt, user_prompt, response)
 
         return self._parse_plan(response)
 
@@ -62,13 +91,23 @@ Verfügbare Tools (nutze NUR diese als ACTION):
 REGELN:
 - MAXIMAL 5 Steps pro Plan. Priorisiere die wichtigsten Aktionen.
 - Nutze NUR die oben gelisteten Tool-Namen als ACTION.
+- Alle Dateipfade beginnen mit WORKING/ (z.B. WORKING/WORKPAPER/datei.md, WORKING/DIARY/2026-04.md).
+- NIEMALS WORKSPACE/ als Pfad-Prefix nutzen. IMMER mit WORKING/ starten.
 - Erfinde KEINE Dateipfade — nutze workspace_status oder list_dir zuerst, um echte Pfade zu ermitteln.
 - Jeder STEP muss einen KONKRETEN, existierenden Pfad oder Inhalt als Target haben.
 - Plane NUR Aktionen die zum aktiven Projekt-Scope passen (falls Projekt aktiv).
+- WIEDERHOLE NICHT denselben Plan wie im letzten Tick. Wenn nichts zu tun ist, plane KEINE Steps.
+- Wenn die letzten Tick-Ergebnisse zeigen dass alles stabil läuft, plane NUR wenn es neue Aufgaben gibt.
 
-REASONING: <Warum>
-STEP: <tool_name> | <target> | <beschreibung>
-STEP: <tool_name> | <target> | <beschreibung>
+VERBOTEN:
+- Beginne NIEMALS mit <Warum> oder ähnlichen XML-Tags.
+- Schreibe KEINE langen Erklärungen. NUR das Format unten.
+
+Antworte EXAKT in diesem Format (jede Zeile muss mit dem Schlüsselwort beginnen):
+GOAL: Was soll dieser Plan erreichen?
+REASONING: Warum sind diese Schritte nötig?
+STEP: tool_name | target | beschreibung
+STEP: tool_name | target | beschreibung
 """
 
     def _format_project_block(self) -> str:
@@ -118,6 +157,13 @@ STEP: <tool_name> | <target> | <beschreibung>
         steps = []
 
         for line in lines:
+            line = line.strip()
+            # Handle LLM ignoring format — strip XML-style tags
+            if line.startswith("<Warum>") or line.startswith("<warum>"):
+                line = line.split(">", 1)[-1].strip()
+                if not reasoning:
+                    reasoning = line
+                continue
             line = line.strip()
             if line.startswith("GOAL:"):
                 goal = line[5:].strip()

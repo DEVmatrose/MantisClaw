@@ -1,9 +1,10 @@
 # Mantis-OS Default Configuration
 
 runtime:
-  heartbeat_interval: 10        # Sekunden zwischen Ticks
+  heartbeat_interval: 60        # Sekunden zwischen Ticks (war 10 — zu aggressiv)
   max_retries: 3                # Retry bei Tool-Fehlern
   session_timeout: 3600         # Max Session-Dauer (Sek)
+  idle_skip_after: 3            # Nach N identischen Ticks → Skip bis Änderung
 
 reflection:
   max_retries: 2                # Max RFL-Reruns pro Fehlerkette

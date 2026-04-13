@@ -31,8 +31,8 @@ MantisClaw/
 ├── READ-AGENT.md                 ← Agent-Vertrag
 │
 ├── core/                         ← Das Gehirn (L3) — reiner Loop
-│   ├── runtime.py                ← Heartbeat-Loop
-│   ├── planner.py                ← Denken (mit Tool-Descriptions Injection)
+│   ├── runtime.py                ← Heartbeat-Loop (60s, Idle Detection)
+│   ├── planner.py                ← Denken (Tool-Injection + JSONL Prompt Logging)
 │   ├── executor.py               ← Handeln (Fuzzy Action Matching)
 │   ├── observer.py               ← Beobachten + Health-Tracking
 │   ├── reflect.py                ← Reflexion (RFL) — Selbstkorrektur
@@ -66,6 +66,8 @@ MantisClaw/
 │       ├── DIARY/                ← Entscheidungs-Kontext
 │       ├── GUIDELINES/           ← Procedural Memory
 │       ├── SCIENCE/              ← Knowledge Validation
+│       ├── LOGS/                 ← Audit Trail (prompt_log.jsonl)
+│       ├── PROJECT/              ← Projekt-Definitionen (project.yaml)
 │       └── TOOLS/                ← Skills (Orchestrierungs-Rezepte)
 │           └── skills/           ← Markdown+YAML Workflows
 │
@@ -88,6 +90,8 @@ MantisClaw nutzt AAMS als **strukturierten Körper** (`WORKSPACE/WORKING/`). Die
 - **Guidelines** — Procedural Memory (lernbare Arbeitsweisen)
 - **SCIENCE** — Knowledge Validation (externe Forschung, Hypothesen)
 - **Skills** — Orchestrierungs-Rezepte in TOOLS/skills/
+- **Logs** — Audit Trail (prompt_log.jsonl, Runtime-Metriken)
+- **Project** — Projekt-Definitionen mit Milestones und Status
 
 AAMS-Standard: [github.com/DEVmatrose/AAMS](https://github.com/DEVmatrose/AAMS)
 
@@ -196,10 +200,10 @@ Der Runtime-Loop läuft im Terminal und loggt jeden Tick:
 ```
 12:00:00 [mantisclaw.runtime] INFO: MantisClaw starting...
 12:00:00 [mantisclaw.runtime] INFO: Health: HEALTHY
-12:00:00 [mantisclaw.runtime] INFO: Heartbeat: 10s
-12:00:10 [mantisclaw.runtime] INFO: === TICK 1 ===
-12:00:10 [mantisclaw.runtime] DEBUG: Soul computed. Agent: MantisClaw
-12:00:10 [mantisclaw.runtime] INFO: Plan: ... (2 steps)
+12:00:00 [mantisclaw.runtime] INFO: Heartbeat: 60s
+12:01:00 [mantisclaw.runtime] INFO: === TICK 1 ===
+12:01:00 [mantisclaw.runtime] DEBUG: Soul computed. Agent: MantisClaw
+12:01:00 [mantisclaw.runtime] INFO: Plan: ... (2 steps)
 ```
 
 Stoppt mit `Ctrl+C`. Erstellt automatisch ein Workpaper in `WORKSPACE/WORKING/WORKPAPER/`.
@@ -213,18 +217,20 @@ uvicorn dashboard.app:app --reload --port 8080
 Öffne **http://localhost:8080** — das Dashboard zeigt:
 
 ```
-┌──────────┬──────────────────────────────────┬───────────────┐
-│ Runtime  │                                  │ Chat-History  │
-│ Identity │        Chat mit dem Agent         │ Workpapers    │
-│ Workspace│                                  │ (reserved)    │
-│ Workpaper│                                  │ (reserved)    │
-└──────────┴──────────────────────────────────┴───────────────┘
+┌─────────────┬──────────────────────────────────┬───────────────┐
+│ L1 Core     │                                  │ R1 Chat-Hist. │
+│ L2 Identity │        Chat mit dem Agent         │ R2 Project    │
+│ L3 Runtime  │        (SSE-Streaming)            │ R3 Workpapers │
+│ L4 Tools    │                                  │ R4 Workspace  │
+└─────────────┴──────────────────────────────────┴───────────────┘
 ```
 
-- **Links:** Runtime-Status, Identity (soul(t)), Workspace-Baum, aktives Workpaper
+- **Links (Agent):** L1 Core (Backend/Model-Switcher), L2 Identity (soul(t) + Inspector), L3 Runtime (Health + Live Tick Feed + Prompt Inspector), L4 Tools (Registry)
 - **Mitte:** Chat-Interface mit SSE-Streaming (Token-by-Token)
-- **Rechts:** Chat-History, offene Workpapers
+- **Rechts (AAMS):** R1 Chat-History, R2 Projekt + Milestones, R3 Workpapers (mit Closed-Toggle), R4 Workspace-Baum + WP-Preview
 - **Model-Switcher:** Wechselt live zwischen LM Studio / Ollama Modellen
+- **Identity Inspector:** Zeigt alle 6 Identity-Dateien (base, agenda, account, social, decentral, hook) in Tabs
+- **Prompt Inspector:** Letzte LLM-Prompts (System/User/Response) zur Analyse
 
 ---
 
@@ -236,10 +242,38 @@ uvicorn dashboard.app:app --reload --port 8080
 | Runtime | ✅ Eigener Heartbeat-Loop |
 | Identity | ✅ Alle Dateien lokal in `identity/` |
 | LLM Backend | ✅ LM Studio (default) / Ollama / Cloud optional |
-| Dashboard | ✅ Web-UI auf localhost:8080 (FastAPI + SSE) |
+| Dashboard | ✅ Web-UI auf localhost:8080 (FastAPI + SSE + Live Tick Feed) |
+| Idle Detection | ✅ Identische Pläne werden nach 3 Wiederholungen übersprungen |
+| Prompt Logging | ✅ JSONL-basiert, über Dashboard inspizierbar |
 | Deployment | ✅ Einzelnes Repo, eigenständig lauffähig |
 
 **Der Code ist identisch mit MantisClaw in Mantis-OS** — nur die Integration unterscheidet sich.
+
+---
+
+## Runtime-Effizienz
+
+Der autonome Loop verbraucht LLM-Tokens bei jedem Tick. Ohne Gegenmaßnahmen kann ein „Hamsterrad" entstehen — identische Pläne werden endlos wiederholt, jeder Schritt produziert Fehler, und das `analyze`-Tool generiert lange Erklärungen zu nicht-existierenden Pfaden.
+
+### Gegenmaßnahmen (implementiert)
+
+| Problem | Lösung |
+|---------|--------|
+| **10s Heartbeat zu aggressiv** | Heartbeat auf 60s erhöht (`config/default.yaml`) |
+| **Identische Pläne im Loop** | Idle Detection: Plan-Signatur wird gehasht, nach 3 identischen Plänen wird Execution übersprungen |
+| **Kein Gedächtnis zwischen Ticks** | Letzte 3 Tick-Summaries werden in den Planner-Context injiziert mit „NICHT wiederholen!" |
+| **LLM erfindet Dateipfade** | `_validate_path()` strippt halluzinierte Prefixe (`WORKSPACE/`, `./WORKSPACE/WORKING/`), Tool-Descriptions geben korrekte Beispielpfade |
+| **LLM nutzt WORKSPACE/ statt WORKING/** | `workspace_status` gibt Pfade mit `WORKING/` Prefix aus, Planner-Regel: „NIEMALS WORKSPACE/ als Prefix" |
+| **LLM ignoriert Antwortformat** | Explizite Format-Instruktion + `VERBOTEN:` Block (keine XML-Tags) + `_parse_plan()` fängt `<Warum>` graceful ab |
+| **LLM-Antworten zu lang (2000+ Tokens)** | Planner max 500 Tokens, Analyze max 300 Tokens, Summarize max 200 Tokens |
+| **Analyze erklärt Fehler endlos** | Token-Limit + korrigierte Pfade → weniger Fehler → weniger Erklärungen |
+
+### Monitoring
+
+- **Prompt Logging:** Jeder Planner-Call wird als JSONL in `WORKSPACE/WORKING/LOGS/prompt_log.jsonl` gespeichert
+- **Prompt Inspector:** Dashboard-Modal zeigt die letzten LLM-Prompts (System/User/Response)
+- **Live Tick Feed:** Dashboard zeigt die letzten 8 Ticks mit Erfolgsrate, Goal und Anomalien
+- **Idle-Indikator:** Dashboard zeigt „💤 IDLE: X identische Pläne" wenn der Agent im Leerlauf ist
 
 ---
 

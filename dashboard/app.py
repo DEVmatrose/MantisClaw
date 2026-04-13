@@ -9,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from dashboard import db
-from dashboard.chat import stream_chat, list_lmstudio_models, list_ollama_models
+from dashboard.chat import stream_chat, list_lmstudio_models, list_ollama_models, \
+    load_lmstudio_model, unload_lmstudio_model, list_lmstudio_loaded_models, LMS_MGMT_BASE
 
 logger = logging.getLogger("mantisclaw.dashboard")
 
@@ -86,13 +87,21 @@ def _get_active_workpaper() -> dict | None:
 
 
 def _get_workspace_tree() -> list[dict]:
+    """Get workspace folder tree. If a project is active, show project-scoped view."""
     working = PROJECT_ROOT / "WORKSPACE" / "WORKING"
     result = []
+    # Agent-level folders (always shown, marked as agent-scope)
+    agent_folders = {"AGENT-MEMORY"}
+    # Project-level folders (will be scoped to active project in future)
     if working.exists():
         for d in sorted(working.iterdir()):
             if d.is_dir():
                 count = sum(1 for f in d.rglob("*") if f.is_file() and f.name != ".gitkeep")
-                result.append({"name": d.name, "count": count})
+                result.append({
+                    "name": d.name,
+                    "count": count,
+                    "scope": "agent" if d.name in agent_folders else "project",
+                })
     return result
 
 
@@ -110,7 +119,7 @@ def _get_tool_names() -> list[str]:
         for t in create_memory_tools(workspace):
             names.append(t.name)
         # analysis tools need LLM backend, just list names
-        names.extend(["analyze", "summarize"])
+        names.extend(["analyze", "summarize", "list_models", "switch_model"])
         return names
     except Exception:
         return []
@@ -384,6 +393,45 @@ async def set_model(request: Request):
     return {"backend": state.backend, "model": state.model}
 
 
+@app.post("/api/models/load")
+async def api_load_model(request: Request):
+    """Load a model in LM Studio (unloads current if different)."""
+    data = await request.json()
+    model_id = data.get("model_id", "")
+    if not model_id:
+        return {"error": "model_id required"}
+
+    # Unload current if different
+    current_loaded = await asyncio.to_thread(list_lmstudio_loaded_models)
+    loaded_ids = [m.get("identifier", m.get("id", "")) for m in current_loaded]
+    if loaded_ids and model_id not in loaded_ids:
+        for mid in loaded_ids:
+            await asyncio.to_thread(unload_lmstudio_model, mid)
+        logger.info(f"Unloaded: {loaded_ids}")
+
+    result = await asyncio.to_thread(load_lmstudio_model, model_id)
+    if "error" not in result:
+        state.model = model_id
+        logger.info(f"Loaded model: {model_id}")
+    return {"model_id": model_id, "result": result, "current_model": state.model}
+
+
+@app.post("/api/models/unload")
+async def api_unload_model(request: Request):
+    """Unload a specific model from LM Studio."""
+    data = await request.json()
+    model_id = data.get("model_id", state.model)
+    result = await asyncio.to_thread(unload_lmstudio_model, model_id)
+    return {"model_id": model_id, "result": result}
+
+
+@app.get("/api/models/loaded")
+async def api_loaded_models():
+    """List currently loaded models in LM Studio."""
+    loaded = await asyncio.to_thread(list_lmstudio_loaded_models)
+    return {"loaded": loaded}
+
+
 @app.get("/api/health")
 async def health():
     connection = await asyncio.to_thread(_check_connection)
@@ -405,20 +453,63 @@ async def remove_conversation(conv_id: str):
 @app.get("/api/runtime")
 async def runtime_status():
     """Get runtime state: tick count, health, registered tools, active session."""
+    # Load project tools (available even without runtime)
+    project = _get_active_project()
+    project_tools = []
+    project_tool_names = set()
+    if project and "tools" in project:
+        for pt in project["tools"]:
+            project_tools.append({
+                "name": pt.get("name", ""),
+                "description": pt.get("description", ""),
+                "file": pt.get("file", ""),
+                "skill": pt.get("skill", ""),
+            })
+            project_tool_names.add(pt.get("name", ""))
     if not _runtime_instance:
-        return {"running": False, "message": "Runtime not connected"}
+        return {"running": False, "message": "Runtime not connected",
+                "project_tools": project_tools,
+                "project_name": project.get("name") if project else None}
     rt = _runtime_instance
     return {
         "running": rt.running,
         "tick_count": rt.tick_count,
         "health": rt.observer.health,
         "heartbeat": rt.heartbeat_interval,
-        "tools": [{"name": t.name, "description": t.description, "level": t.security_level}
+        "tools": [{"name": t.name, "description": t.description, "level": t.security_level,
+                    "project": t.name in project_tool_names}
                   for t in rt.registry.list_available()],
+        "project_tools": project_tools,
+        "project_name": project.get("name") if project else None,
         "session": {
             "workpaper": str(rt.session.workpaper_path) if rt.session.workpaper_path else None,
             "agent": rt.session.agent_name,
         },
+    }
+
+
+@app.get("/api/runtime/ticks")
+async def runtime_ticks(limit: int = 10):
+    """Get recent tick history from observer."""
+    if not _runtime_instance:
+        return {"ticks": [], "idle_repeats": 0}
+    rt = _runtime_instance
+    ticks = []
+    for m in rt.observer.history[-limit:]:
+        ticks.append({
+            "tick": m.tick_number,
+            "ts": m.timestamp,
+            "goal": m.plan_goal,
+            "steps": m.steps_total,
+            "ok": m.steps_succeeded,
+            "fail": m.steps_failed,
+            "anomalies": m.anomalies[:3],
+        })
+    ticks.reverse()
+    return {
+        "ticks": ticks,
+        "idle_repeats": getattr(rt, '_repeat_count', 0),
+        "tick_summaries": getattr(rt, '_tick_summaries', [])[-5:],
     }
 
 
@@ -449,3 +540,62 @@ async def get_workpaper_content(wp_name: str):
             status = "CLOSED" if "**Status:** CLOSED" in content else "OPEN"
             return {"name": wp_name, "status": status, "content": content}
     return {"error": "Workpaper not found"}
+
+
+@app.get("/api/identity")
+async def get_identity_files():
+    """Return all identity files + computed soul(t) for the inspector panel."""
+    identity_dir = PROJECT_ROOT / "identity"
+    files = {}
+    for fname in ["base.md", "agenda.md", "account.md", "social.md", "decentral.md", "hook.md"]:
+        path = identity_dir / fname
+        if not path.exists():
+            path = identity_dir / f"{fname}.example"
+        if path.exists():
+            files[fname] = path.read_text(encoding="utf-8")
+        else:
+            files[fname] = ""
+
+    # Compute soul(t) summary
+    base_raw = files.get("base.md", "")
+    soul_fields = {}
+    for line in base_raw.split("\n"):
+        line = line.strip()
+        if line.startswith("name:"):
+            soul_fields["name"] = line.split(":", 1)[1].strip().strip('"')
+        elif line.startswith("owner:"):
+            soul_fields["owner"] = line.split(":", 1)[1].strip().strip('"')
+
+    active_project = _get_active_project()
+
+    return {
+        "files": files,
+        "soul_formula": "soul(t) = f(base, agenda.resolve(account, social, decentral), working_context)",
+        "soul_fields": soul_fields,
+        "active_project": active_project.get("name") if active_project else None,
+    }
+
+
+@app.get("/api/logs/prompts")
+async def get_prompt_log(limit: int = 20):
+    """Return the last N prompt entries from LOGS/prompt_log.jsonl."""
+    log_path = PROJECT_ROOT / "WORKSPACE" / "WORKING" / "LOGS" / "prompt_log.jsonl"
+    if not log_path.exists():
+        return {"entries": [], "total": 0}
+    try:
+        lines = log_path.read_text(encoding="utf-8").strip().splitlines()
+        # Return last N entries newest-first
+        entries = []
+        for line in reversed(lines[-limit * 2:]):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+            if len(entries) >= limit:
+                break
+        return {"entries": entries, "total": len(lines)}
+    except Exception as e:
+        return {"error": str(e), "entries": []}

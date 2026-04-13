@@ -5,6 +5,9 @@ from urllib.error import URLError
 
 logger = logging.getLogger("mantisclaw.dashboard.chat")
 
+# LM Studio Management API base (non-OpenAI-compat path)
+LMS_MGMT_BASE = "http://localhost:1234/api/v1"
+
 
 def list_lmstudio_models(base_url: str = "http://localhost:1234/v1") -> list[str]:
     try:
@@ -14,6 +17,50 @@ def list_lmstudio_models(base_url: str = "http://localhost:1234/v1") -> list[str
             return [m["id"] for m in data.get("data", [])]
     except Exception:
         return []
+
+
+def list_lmstudio_loaded_models(mgmt_base: str = LMS_MGMT_BASE) -> list[dict]:
+    """Return loaded models via LM Studio management API /api/v1/models."""
+    try:
+        req = Request(f"{mgmt_base}/models")
+        with urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read())
+            # Returns list of {path, identifier, ...}
+            return data if isinstance(data, list) else data.get("data", [])
+    except Exception:
+        return []
+
+
+def load_lmstudio_model(model_id: str, mgmt_base: str = LMS_MGMT_BASE) -> dict:
+    """Load a model into memory via LM Studio /api/v1/models/load."""
+    payload = json.dumps({"identifier": model_id}).encode("utf-8")
+    req = Request(
+        f"{mgmt_base}/models/load",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def unload_lmstudio_model(model_id: str, mgmt_base: str = LMS_MGMT_BASE) -> dict:
+    """Unload a model from memory via LM Studio /api/v1/models/unload."""
+    payload = json.dumps({"identifier": model_id}).encode("utf-8")
+    req = Request(
+        f"{mgmt_base}/models/unload",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        return {"error": str(e)}
 
 
 def list_ollama_models(base_url: str = "http://localhost:11434") -> list[str]:

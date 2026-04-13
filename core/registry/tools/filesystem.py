@@ -18,8 +18,14 @@ def create_filesystem_tools(workspace_root: Path, allowed_paths: list[str] | Non
         allowed_paths = [str(workspace_root)]
 
     def _validate_path(target: str) -> Path:
-        """Ensure path is within allowed boundaries."""
-        resolved = (workspace_root / target).resolve()
+        """Ensure path is within allowed boundaries. Strips common LLM path hallucinations."""
+        # Strip prefixes that LLM commonly hallucinates
+        clean = target.strip()
+        for prefix in ["WORKSPACE/WORKING/", "WORKSPACE/", "./WORKSPACE/WORKING/", "./WORKSPACE/", "./"]:
+            if clean.startswith(prefix):
+                clean = clean[len(prefix):]
+                break
+        resolved = (workspace_root / clean).resolve()
         for allowed in allowed_paths:
             allowed_resolved = Path(allowed).resolve()
             if str(resolved).startswith(str(allowed_resolved)):
@@ -67,48 +73,54 @@ def create_filesystem_tools(workspace_root: Path, allowed_paths: list[str] | Non
 
     async def workspace_status(target: str, params: dict) -> str:
         """Return a summary of the current workspace state."""
-        lines = [f"Workspace: {workspace_root}"]
+        lines = ["Workspace-Struktur (alle Pfade relativ — z.B. 'WORKING/WORKPAPER/datei.md'):"]
         working = workspace_root / "WORKING"
         if working.exists():
             for folder in sorted(working.iterdir()):
                 if folder.is_dir():
                     count = len(list(folder.rglob("*.md")))
-                    lines.append(f"  {folder.name}/: {count} .md files")
+                    lines.append(f"  WORKING/{folder.name}/: {count} .md files")
         # Active workpapers
         wp_dir = working / "WORKPAPER"
         if wp_dir.exists():
             active = [f.name for f in wp_dir.glob("*.md")]
-            lines.append(f"Active workpapers: {len(active)}")
+            lines.append(f"Aktive Workpapers ({len(active)}):")
             for a in active[:5]:
-                lines.append(f"  - {a}")
+                lines.append(f"  → WORKING/WORKPAPER/{a}")
+        # Active project
+        project_dir = working / "PROJECT"
+        if project_dir.exists():
+            projects = [d.name for d in project_dir.iterdir() if d.is_dir()]
+            if projects:
+                lines.append(f"Projekte: {', '.join(projects)}")
         return "\n".join(lines)
 
     return [
         Tool(
             name="read_file",
             handler=read_file,
-            description="Read a file from WORKSPACE. Target: relative path.",
+            description="Read a file. Target: relative path starting with WORKING/ (e.g. WORKING/WORKPAPER/datei.md).",
             security_level=1,
             tags=["filesystem", "read"],
         ),
         Tool(
             name="write_file",
             handler=write_file,
-            description="Write content to a file in WORKSPACE. Target: relative path. Params: {content: str}.",
+            description="Write content to a file. Target: relative path starting with WORKING/ (e.g. WORKING/WORKPAPER/datei.md). Params: {content: str}.",
             security_level=2,
             tags=["filesystem", "write"],
         ),
         Tool(
             name="append_file",
             handler=append_file,
-            description="Append content to a file. Target: relative path. Params: {content: str}.",
+            description="Append content to a file. Target: relative path starting with WORKING/ (e.g. WORKING/DIARY/2026-04.md). Params: {content: str}.",
             security_level=2,
             tags=["filesystem", "write"],
         ),
         Tool(
             name="list_dir",
             handler=list_dir,
-            description="List directory contents. Target: relative path.",
+            description="List directory contents. Target: relative path starting with WORKING/ (e.g. WORKING/WORKPAPER/).",
             security_level=1,
             tags=["filesystem", "read"],
         ),

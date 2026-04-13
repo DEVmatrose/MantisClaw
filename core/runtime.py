@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 from core.llm import LLMBackend
 from core.planner import Planner
+from core.planner import set_prompt_log_path
 from core.executor import Executor
 from core.observer import Observer
 from core.reflect import Reflector
@@ -29,6 +30,8 @@ from core.registry import ToolRegistry
 from core.registry.tools.filesystem import create_filesystem_tools
 from core.registry.tools.memory import create_memory_tools
 from core.registry.tools.analysis import create_analysis_tools
+from core.registry.tools.llm_management import create_llm_management_tools
+from core.registry.tools.loop_monitor import create_loop_monitor_tools
 
 logger = logging.getLogger("mantisclaw.runtime")
 
@@ -140,12 +143,21 @@ class MantisClaw:
         if skill_descs and "keine Skills" not in skill_descs:
             self.planner.tool_descriptions += "\n\nVerfügbare Skills:\n" + skill_descs
 
+        # Prompt logging
+        set_prompt_log_path(workspace_path / "WORKING" / "LOGS" / "prompt_log.jsonl")
+
         # L2: Project layer
         self.workspace_path = workspace_path
 
         # Config
-        self.heartbeat_interval = self.config.get("runtime", {}).get("heartbeat_interval", 10)
+        self.heartbeat_interval = self.config.get("runtime", {}).get("heartbeat_interval", 60)
         self.session_timeout = self.config.get("runtime", {}).get("session_timeout", 3600)
+
+        # Idle detection
+        self._idle_skip_after = self.config.get("runtime", {}).get("idle_skip_after", 3)
+        self._last_plan_hash: str = ""
+        self._repeat_count: int = 0
+        self._tick_summaries: list[str] = []  # Last N tick summaries for planner
 
     def _load_config(self, config_path: Path | None) -> dict:
         if config_path is None:
@@ -171,6 +183,14 @@ class MantisClaw:
 
         # Analysis tools (LLM-powered)
         for tool in create_analysis_tools(self.llm):
+            self.registry.register(tool)
+
+        # LLM Management tools (model switching)
+        for tool in create_llm_management_tools(self.llm):
+            self.registry.register(tool)
+
+        # Loop monitoring tools (token validation, health check)
+        for tool in create_loop_monitor_tools(workspace_path):
             self.registry.register(tool)
 
         # Wire all registered tools into executor
@@ -231,8 +251,13 @@ class MantisClaw:
         if active_project:
             self.planner.set_project_context(active_project)
 
-        # 4. Memory context
+        # 4. Memory context + tick history
         memory_context = self.ltm.query("current", max_results=3)
+
+        # 4b. Inject last tick summaries so planner doesn't repeat
+        if self._tick_summaries:
+            history_block = "Letzte Tick-Ergebnisse (NICHT wiederholen!):\n" + "\n".join(self._tick_summaries[-3:])
+            memory_context.append(history_block)
 
         # 5. Plan
         try:
@@ -241,6 +266,19 @@ class MantisClaw:
         except Exception as e:
             logger.error(f"Planning failed: {e}")
             return
+
+        # 5b. Idle detection — skip if plan is repetitive
+        plan_sig = "|".join(f"{s.action}:{s.target}" for s in plan.steps)
+        if plan_sig == self._last_plan_hash:
+            self._repeat_count += 1
+            if self._repeat_count >= self._idle_skip_after:
+                logger.info(f"IDLE: Plan identical for {self._repeat_count} ticks — skipping execution. "
+                            f"Waiting for external change.")
+                self._tick_summaries.append(f"Tick-{self.tick_count}: IDLE (identischer Plan übersprungen)")
+                return
+        else:
+            self._repeat_count = 0
+        self._last_plan_hash = plan_sig
 
         # 6. Execute
         if plan.steps:
@@ -284,6 +322,14 @@ class MantisClaw:
 
             # 9. Log to session
             self.session.log_action("TICK", f"tick-{self.tick_count}", f"Plan: {plan.goal} | {result.summary}")
+
+            # 9b. Save tick summary for planner history
+            step_names = ", ".join(s.action for s in plan.steps[:3])
+            self._tick_summaries.append(
+                f"Tick-{self.tick_count}: {plan.goal or '(kein Ziel)'} → {result.summary} [{step_names}]"
+            )
+            # Keep only last 5
+            self._tick_summaries = self._tick_summaries[-5:]
         else:
             logger.info("No steps to execute this tick.")
 

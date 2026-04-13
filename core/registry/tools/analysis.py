@@ -23,7 +23,7 @@ def create_analysis_tools(llm_backend) -> list[Tool]:
             context_block = "\n".join(prior[-3:])
             prompt = f"Kontext aus vorherigen Schritten:\n{context_block}\n\nAufgabe: {prompt}"
 
-        result = await llm_backend.complete_simple(prompt)
+        result = await llm_backend.complete_simple(prompt, max_tokens=300)
         return result
 
     async def summarize(target: str, params: dict) -> str:
@@ -36,7 +36,7 @@ def create_analysis_tools(llm_backend) -> list[Tool]:
             content = "\n".join(prior[-3:])
 
         result = await llm_backend.complete_simple(
-            f"Fasse zusammen (max 5 Sätze):\n\n{content}"
+            f"Fasse zusammen (max 5 Sätze):\n\n{content}", max_tokens=200
         )
         return result
 

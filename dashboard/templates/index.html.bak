@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -40,7 +40,7 @@
                         <select id="modelSelect">
                             <option>{{ state.model }}</option>
                         </select>
-                        <button class="btn-load" id="loadModelBtn" onclick="loadModel()" title="Load model into LM Studio">⬆</button>
+                        <button class="btn-load" id="loadModelBtn" onclick="loadModel()" title="Modell in LM Studio laden">⬆</button>
                     </div>
                     <div id="modelLoadStatus" class="model-load-status" style="display:none"></div>
                     <div class="core-status">
@@ -63,27 +63,47 @@
                 </div>
             </div>
 
-            <!-- L3: RUNTIME -->
+            <!-- L3: WORKSPACE -->
             <div class="box" id="box-L3">
-                <div class="box-header">L3 · Runtime <span class="status-dot" id="runtimeDot"></span>
-                    <button class="btn-inspect" style="float:right;margin-top:-2px" onclick="showPromptInspector()">🔍 Prompts</button>
-                </div>
-                <div class="box-body" id="runtimeInfo">
-                    <span class="muted">Loading runtime status...</span>
-                </div>
-                <div class="tick-feed" id="tickFeed">
-                    <div class="tick-feed-header">Live Ticks</div>
-                    <div class="tick-feed-list" id="tickFeedList">
-                        <span class="muted">Waiting for ticks...</span>
+                <div class="box-header">L3 · Workspace</div>
+                <div class="box-body">
+                    {% if active_project %}
+                    <div class="ws-project">
+                        <span class="folder-icon">🎯</span>
+                        <strong>{{ active_project.name }}</strong>
+                        <span class="project-status">{{ active_project.status }}</span>
                     </div>
+                    {% if active_project.milestones %}
+                    <div class="ws-milestones">
+                        {% for ms in active_project.milestones %}
+                        <div class="ms-item ms-{{ ms.status }}">
+                            {% if ms.status == 'done' %}✅{% elif ms.status == 'in-progress' %}🔨{% else %}⬜{% endif %}
+                            {{ ms.name }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <hr style="border-color: #2a3a4a; margin: 6px 0;">
+                    {% endif %}
+                    {% for folder in workspace %}
+                    <div class="ws-folder">
+                        <span class="folder-icon">📁</span>
+                        {{ folder.name }}
+                        <span class="folder-count">{{ folder.count }}</span>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
 
-            <!-- L4: TOOLS -->
-            <div class="box" id="box-L4">
-                <div class="box-header">L4 · Tools</div>
-                <div class="box-body" id="toolsList">
-                    <span class="muted">Loading tools...</span>
+            <!-- L4: WORKING (Active Workpaper) -->
+            <div class="box box-tall" id="box-L4">
+                <div class="box-header">L4 · Working{% if active_wp %} — {{ active_wp.name }}{% endif %}</div>
+                <div class="box-body workpaper-content">
+                    {% if active_wp %}
+                    <pre class="wp-text">{{ active_wp.content[:2000] }}{% if active_wp.content|length > 2000 %}…{% endif %}</pre>
+                    {% else %}
+                    <span class="muted">Kein aktives Workpaper</span>
+                    {% endif %}
                 </div>
             </div>
         </aside>
@@ -94,9 +114,9 @@
                 {% if not conv_id %}
                 <div class="chat-welcome">
                     <h2>MantisClaw</h2>
-                    <p>Select a conversation or start a new one.</p>
+                    <p>Wähle eine Conversation oder starte eine neue.</p>
                     <form action="/conversations" method="post">
-                        <button class="btn btn-primary" type="submit">+ New Conversation</button>
+                        <button class="btn btn-primary" type="submit">+ Neue Conversation</button>
                     </form>
                 </div>
                 {% else %}
@@ -116,9 +136,9 @@
             {% if conv_id %}
             <div class="chat-input">
                 <form action="/chat/{{ conv_id }}/send" method="post" class="input-form" id="chatForm">
-                    <textarea name="message" id="messageInput" placeholder="Message to MantisClaw..." rows="2"
+                    <textarea name="message" id="messageInput" placeholder="Nachricht an MantisClaw..." rows="2"
                               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit()}"></textarea>
-                    <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
+                    <button type="submit" class="btn btn-primary" id="sendBtn">Senden</button>
                 </form>
             </div>
             {% endif %}
@@ -142,42 +162,14 @@
                     </a>
                     {% endfor %}
                     {% if not conversations %}
-                    <span class="muted">No conversations</span>
+                    <span class="muted">Keine Conversations</span>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- R2: PROJECT -->
-            <div class="box" id="box-R2">
-                <div class="box-header">R2 · Project</div>
-                <div class="box-body">
-                    {% if active_project %}
-                    <div class="ws-project">
-                        <span class="folder-icon">🎯</span>
-                        <strong>{{ active_project.name }}</strong>
-                        <span class="project-status">{{ active_project.status }}</span>
-                    </div>
-                    {% if active_project.milestones %}
-                    <div class="ws-milestones">
-                        {% for ms in active_project.milestones %}
-                        <div class="ms-item ms-{{ ms.status }}">
-                            {% if ms.status == 'done' %}✅{% elif ms.status == 'in-progress' %}🔨{% else %}⬜{% endif %}
-                            {{ ms.name }}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    {% else %}
-                    <span class="muted">No active project</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- R3: WORKPAPERS -->
-            <div class="box" id="box-R3">
-                <div class="box-header">R3 · Workpapers <span class="wp-count" id="wpCount">{{ workpapers|length }}</span>
-                    <button class="btn btn-xs toggle-closed" onclick="toggleClosedWPs()" title="Show closed">📂</button>
-                </div>
+            <!-- R2: WORKPAPERS -->
+            <div class="box box-tall" id="box-R2">
+                <div class="box-header">R2 · Workpapers <span class="wp-count" id="wpCount">{{ workpapers|length }}</span></div>
                 <div class="box-body">
                     {% for wp in workpapers %}
                     <div class="wp-item" onclick="showWorkpaper('{{ wp.name }}')" style="cursor:pointer" title="{{ wp.name }}">
@@ -186,34 +178,29 @@
                     </div>
                     {% endfor %}
                     {% if not workpapers %}
-                    <span class="muted">No workpapers</span>
+                    <span class="muted">Keine Workpapers</span>
                     {% endif %}
-                    <div id="closedWPs" style="display:none"></div>
                 </div>
             </div>
 
-            <!-- R4: WORKSPACE -->
-            <div class="box box-tall" id="box-R4">
-                <div class="box-header">R4 · Workspace{% if active_project %} — {{ active_project.name }}{% endif %}</div>
-                <div class="box-body">
-                    {% for folder in workspace %}
-                    <div class="ws-folder {{ folder.scope }}-scope">
-                        <span class="folder-icon">{% if folder.scope == 'agent' %}🤖{% else %}📁{% endif %}</span>
-                        {{ folder.name }}
-                        <span class="folder-count">{{ folder.count }}</span>
-                        {% if folder.scope == 'agent' %}<span class="scope-tag agent">agent</span>{% endif %}
-                    </div>
-                    {% endfor %}
-                    <hr style="border-color: #2a3a4a; margin: 6px 0;">
-                    <div class="workpaper-content" id="wpPreview">
-                        {% if active_wp %}
-                        <pre class="wp-text">{{ active_wp.content[:2000] }}{% if active_wp.content|length > 2000 %}…{% endif %}</pre>
-                        {% else %}
-                        <span class="muted">Click a workpaper to preview</span>
-                        {% endif %}
-                    </div>
+            <!-- R3: RUNTIME -->
+            <div class="box" id="box-R3">
+                <div class="box-header">R3 · Runtime <span class="status-dot" id="runtimeDot"></span>
+                    <button class="btn-inspect" style="float:right;margin-top:-2px" onclick="showPromptInspector()">🔍 Prompts</button>
                 </div>
-            </div>        </aside>
+                <div class="box-body" id="runtimeInfo">
+                    <span class="muted">Lade Runtime-Status...</span>
+                </div>
+            </div>
+
+            <!-- R4: TOOLS -->
+            <div class="box" id="box-R4">
+                <div class="box-header">R4 · Tools</div>
+                <div class="box-body" id="toolsList">
+                    <span class="muted">Lade Tools...</span>
+                </div>
+            </div>
+        </aside>
     </div>
 
     <!-- FOOTER -->
@@ -327,7 +314,7 @@
         btn.textContent = '⏳';
         statusEl.style.display = 'block';
         statusEl.className = 'model-load-status loading';
-        statusEl.textContent = 'Loading ' + model + ' ...';
+        statusEl.textContent = 'Lade ' + model + ' ...';
 
         try {
             const resp = await fetch('/api/models/load', {
@@ -341,13 +328,13 @@
                 statusEl.textContent = '✗ ' + data.result.error;
             } else {
                 statusEl.className = 'model-load-status success';
-                statusEl.textContent = '✓ Loaded: ' + model;
+                statusEl.textContent = '✓ Geladen: ' + model;
                 document.getElementById('navModel').textContent = model;
                 setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
             }
         } catch(e) {
             statusEl.className = 'model-load-status error';
-            statusEl.textContent = '✗ Error: ' + e.message;
+            statusEl.textContent = '✗ Fehler: ' + e.message;
         }
         btn.disabled = false;
         btn.textContent = '⬆';
@@ -360,7 +347,7 @@
     async function showIdentityInspector() {
         const modal = document.getElementById('modal-identity');
         const body = document.getElementById('modal-identity-body');
-        body.innerHTML = '<span class="muted">Loading...</span>';
+        body.innerHTML = '<span class="muted">Lade...</span>';
         modal.style.display = 'flex';
         try {
             const resp = await fetch('/api/identity');
@@ -373,15 +360,15 @@
             });
             html += '</div>';
             tabs.forEach((t,i) => {
-                const content = files[t] || '(empty)';
+                const content = files[t] || '(leer)';
                 html += `<div class="itab-body" id="itab-${t}" style="display:${i===0?'block':'none'}">`;
                 html += `<pre class="wp-text">${escHtml(content)}</pre></div>`;
             });
             html += `<div class="soul-formula">🧬 ${escHtml(data.soul_formula)}</div>`;
-            if (data.active_project) html += `<div class="soul-formula">🎯 Project: ${escHtml(data.active_project)}</div>`;
+            if (data.active_project) html += `<div class="soul-formula">🎯 Projekt: ${escHtml(data.active_project)}</div>`;
             body.innerHTML = html;
         } catch(e) {
-            body.innerHTML = '<span class="muted">Error: ' + e.message + '</span>';
+            body.innerHTML = '<span class="muted">Fehler: ' + e.message + '</span>';
         }
     }
 
@@ -396,16 +383,16 @@
     async function showPromptInspector() {
         const modal = document.getElementById('modal-prompts');
         const body = document.getElementById('modal-prompts-body');
-body.innerHTML = '<span class="muted">Loading...</span>';
+        body.innerHTML = '<span class="muted">Lade...</span>';
         modal.style.display = 'flex';
         try {
             const resp = await fetch('/api/logs/prompts?limit=10');
             const data = await resp.json();
             if (!data.entries || data.entries.length === 0) {
-                body.innerHTML = '<span class="muted">No prompt logs yet. Start the runtime and wait for at least 1 tick.</span>';
+                body.innerHTML = '<span class="muted">Noch keine Prompt-Logs. Runtime muss gestartet und mindestens 1 Tick gelaufen sein.</span>';
                 return;
             }
-            let html = `<div class="prompt-total">Total: ${data.total} entries | Showing last ${data.entries.length}</div>`;
+            let html = `<div class="prompt-total">Gesamt: ${data.total} Einträge | Zeige letzten ${data.entries.length}</div>`;
             data.entries.forEach((e, i) => {
                 const ts = e.ts ? e.ts.replace('T',' ').substring(0,19) : '?';
                 html += `<div class="prompt-entry">`;
@@ -417,7 +404,7 @@ body.innerHTML = '<span class="muted">Loading...</span>';
             });
             body.innerHTML = html;
         } catch(e) {
-            body.innerHTML = '<span class="muted">Error: ' + e.message + '</span>';
+            body.innerHTML = '<span class="muted">Fehler: ' + e.message + '</span>';
         }
     }
 
@@ -434,29 +421,13 @@ body.innerHTML = '<span class="muted">Loading...</span>';
         const resp = await fetch('/api/workpapers/' + encodeURIComponent(name));
         const data = await resp.json();
         if (data.content) {
-            const preview = document.getElementById('wpPreview');
-            preview.innerHTML = '<pre class="wp-text">' + escHtml(data.content.substring(0, 3000)) +
+            const wpBox = document.getElementById('box-L4');
+            const header = wpBox.querySelector('.box-header');
+            const body = wpBox.querySelector('.box-body');
+            header.textContent = 'L4 · Working — ' + data.name;
+            body.innerHTML = '<pre class="wp-text">' + data.content.substring(0, 3000) +
                 (data.content.length > 3000 ? '…' : '') + '</pre>';
-            const header = document.querySelector('#box-R4 .box-header');
-            header.textContent = 'R4 · Workspace — ' + data.name;
         }
-    }
-
-    // Toggle closed workpapers
-    async function toggleClosedWPs() {
-        const el = document.getElementById('closedWPs');
-        if (el.style.display !== 'none') { el.style.display = 'none'; return; }
-        el.innerHTML = '<span class="muted">Loading...</span>';
-        el.style.display = 'block';
-        try {
-            const resp = await fetch('/api/workpapers');
-            const data = await resp.json();
-            const closed = (data.workpapers || []).filter(w => w.status === 'CLOSED');
-            if (closed.length === 0) { el.innerHTML = '<span class="muted">No closed workpapers</span>'; return; }
-            el.innerHTML = '<hr style="border-color:#2a3a4a;margin:4px 0"><div style="font-size:10px;color:#667">Closed:</div>' +
-                closed.map(w => '<div class="wp-item" onclick="showWorkpaper(\'' + w.name + '\')" style="cursor:pointer;opacity:0.6">' +
-                    '<span class="wp-status closed">CLOSED</span><span class="wp-name">' + w.name + '</span></div>').join('');
-        } catch(e) { el.innerHTML = '<span class="muted">Error</span>'; }
     }
 
     // Runtime status polling
@@ -478,50 +449,16 @@ body.innerHTML = '<span class="muted">Loading...</span>';
                     '</div>';
 
                 if (data.tools && data.tools.length > 0) {
-                    let projectTools = data.tools.filter(t => t.project);
-                    let coreTools = data.tools.filter(t => !t.project);
-                    let html = '';
-                    if (data.project_name && data.project_tools && data.project_tools.length > 0) {
-                        html += '<div class="tool-section"><div class="tool-section-header">🎯 ' + escHtml(data.project_name) + '</div>';
-                        data.project_tools.forEach(pt => {
-                            let registered = projectTools.find(t => t.name === pt.name);
-                            html += '<div class="tool-item project-tool" title="' + escHtml(pt.description) + '">' +
-                                '<span class="tool-name">' + escHtml(pt.name) + '</span>' +
-                                (registered ? '<span class="tool-registered">✓</span>' : '<span class="tool-unregistered">○</span>') +
-                                (pt.skill ? '<span class="tool-skill" title="Skill: ' + escHtml(pt.skill) + '">⚡</span>' : '') +
-                                '</div>';
-                        });
-                        html += '</div>';
-                    }
-                    if (coreTools.length > 0) {
-                        html += '<div class="tool-section"><div class="tool-section-header">🔧 Core Tools</div>';
-                        coreTools.forEach(t => {
-                            html += '<div class="tool-item" title="' + escHtml(t.description) + '">' +
-                                '<span class="tool-name">' + t.name + '</span>' +
-                                '<span class="tool-level">L' + t.level + '</span></div>';
-                        });
-                        html += '</div>';
-                    }
-                    tools.innerHTML = html;
+                    tools.innerHTML = data.tools.map(t =>
+                        '<div class="tool-item" title="' + t.description + '">' +
+                        '<span class="tool-name">' + t.name + '</span>' +
+                        '<span class="tool-level">L' + t.level + '</span></div>'
+                    ).join('');
                 }
             } else {
                 dot.className = 'status-dot';
                 info.innerHTML = '<span class="muted">' + (data.message || 'Runtime stopped') + '</span>';
-            }
-            // Show project tools even without runtime
-            if (data.project_tools && data.project_tools.length > 0 && !(data.tools && data.tools.length > 0)) {
-                let html = '<div class="tool-section"><div class="tool-section-header">\ud83c\udfaf ' + escHtml(data.project_name || 'Projekt') + '</div>';
-                data.project_tools.forEach(pt => {
-                    html += '<div class="tool-item project-tool" title="' + escHtml(pt.description) + '">' +
-                        '<span class="tool-name">' + escHtml(pt.name) + '</span>' +
-                        '<span class="tool-unregistered">\u25cb</span>' +
-                        (pt.skill ? '<span class="tool-skill" title="Skill: ' + escHtml(pt.skill) + '">\u26a1</span>' : '') +
-                        '</div>';
-                });
-                html += '</div><span class="muted">Runtime not connected</span>';
-                tools.innerHTML = html;
-            } else if (!(data.tools && data.tools.length > 0)) {
-                tools.innerHTML = '<span class="muted">Runtime not connected</span>';
+                tools.innerHTML = '<span class="muted">Runtime nicht verbunden</span>';
             }
         } catch(e) {
             document.getElementById('runtimeDot').className = 'status-dot';
@@ -531,44 +468,13 @@ body.innerHTML = '<span class="muted">Loading...</span>';
 
     pollRuntime();
     setInterval(pollRuntime, 5000);
-
-    // Live tick feed
-    async function pollTicks() {
-        try {
-            const resp = await fetch('/api/runtime/ticks?limit=8');
-            const data = await resp.json();
-            const list = document.getElementById('tickFeedList');
-            if (!list) return;
-            if (!data.ticks || data.ticks.length === 0) {
-                list.innerHTML = '<span class="muted">Waiting for ticks...</span>';
-                return;
-            }
-            let html = '';
-            if (data.idle_repeats > 0) {
-                html += '<div class="tick-idle">💤 IDLE: ' + data.idle_repeats + ' identische Pläne</div>';
-            }
-            data.ticks.forEach(t => {
-                const ts = t.ts ? t.ts.substring(11, 19) : '?';
-                const cls = t.fail > 0 ? 'tick-fail' : 'tick-ok';
-                html += '<div class="tick-row ' + cls + '">' +
-                    '<span class="tick-num">#' + t.tick + '</span>' +
-                    '<span class="tick-time">' + ts + '</span>' +
-                    '<span class="tick-steps">' + t.ok + '/' + t.steps + '</span>' +
-                    '<span class="tick-goal">' + escHtml((t.goal || '').substring(0, 40)) + '</span>' +
-                    '</div>';
-            });
-            list.innerHTML = html;
-        } catch(e) {}
-    }
-    pollTicks();
-    setInterval(pollTicks, 10000);
     </script>
 
 <!-- Identity Inspector Modal -->
 <div id="modal-identity" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('modal-identity')">
     <div class="modal-box">
         <div class="modal-header">🧬 Identity Inspector — soul(t) <button class="modal-close" onclick="closeModal('modal-identity')">✕</button></div>
-        <div class="modal-body" id="modal-identity-body"><span class="muted">Loading...</span></div>
+        <div class="modal-body" id="modal-identity-body"><span class="muted">Lade...</span></div>
     </div>
 </div>
 
@@ -576,7 +482,7 @@ body.innerHTML = '<span class="muted">Loading...</span>';
 <div id="modal-prompts" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('modal-prompts')">
     <div class="modal-box">
         <div class="modal-header">🔍 Prompt Inspector — LLM I/O <button class="modal-close" onclick="closeModal('modal-prompts')">✕</button></div>
-        <div class="modal-body" id="modal-prompts-body"><span class="muted">Loading...</span></div>
+        <div class="modal-body" id="modal-prompts-body"><span class="muted">Lade...</span></div>
     </div>
 </div>
 

@@ -1,0 +1,27 @@
+name: "TestProjekt1"
+slug: testprojekt1
+status: active
+created: "2026-04-13"
+
+scope: |
+  Testprojekt zur Erprobung des MantisClaw Projekt-Systems.
+  Ziel: Validieren dass der Agent ein externes Projekt eigenständig
+  analysieren, planen und bearbeiten kann — unabhängig vom MantisClaw Core selbst.
+
+goals:
+  - "Projekt-Isolation validieren (eigene WP/WH)"
+  - "Agent arbeitet im Projekt-Scope ohne MantisClaw-Core zu modifizieren"
+  - "Dashboard zeigt TestProjekt1 korrekt an"
+
+milestones:
+  - name: "Projektstruktur erstellt"
+    status: done
+    date: "2026-04-13"
+  - name: "Agent analysiert Projekt-Scope"
+    status: open
+  - name: "Erstes Workpaper im Projekt-Scope"
+    status: open
+
+whitepapers: []
+
+tags: [test, sandbox, project-isolation]
