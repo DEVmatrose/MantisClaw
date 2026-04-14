@@ -1,5 +1,9 @@
 # MantisClaw — Autonomous Agent Loop Framework
 
+<p align="center">
+  <img src="docs/mantisclaw-overview.png" alt="MantisClaw Overview" width="700">
+</p>
+
 **Version:** 0.1.0  
 **Status:** IN ENTWICKLUNG  
 **GitHub:** [DEVmatrose/MantisClaw](https://github.com/DEVmatrose/MantisClaw)  
