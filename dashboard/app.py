@@ -1,16 +1,24 @@
 import asyncio
+import base64
 import json
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
+from fastapi import FastAPI, Request, UploadFile, File
+from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from dashboard import db
 from dashboard.chat import stream_chat, list_lmstudio_models, list_ollama_models, \
     load_lmstudio_model, unload_lmstudio_model, list_lmstudio_loaded_models, LMS_MGMT_BASE
+from dashboard.voice import (
+    generate_tts, transcribe_audio, load_voice_config, save_voice_config,
+    get_greeting_context, build_greeting_prompt,
+    get_voice_system_prompt, add_voice_message, get_voice_history, clear_voice_history,
+    build_classify_prompt, parse_action_intent, extract_identity_updates,
+    apply_identity_updates, get_system_context, build_system_response_prompt,
+)
 
 logger = logging.getLogger("mantisclaw.dashboard")
 
@@ -599,3 +607,195 @@ async def get_prompt_log(limit: int = 20):
         return {"entries": entries, "total": len(lines)}
     except Exception as e:
         return {"error": str(e), "entries": []}
+
+
+# --- Voice API ---
+@app.post("/api/tts")
+async def api_tts(request: Request):
+    """Generate TTS audio from text. Returns base64-encoded MP3."""
+    data = await request.json()
+    text = data.get("text", "").strip()
+    if not text:
+        return {"error": "No text provided"}
+    voice = data.get("voice") or load_voice_config().get("voice")
+    audio_bytes = await generate_tts(text, voice)
+    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+    return {"audio_b64": audio_b64, "voice": voice}
+
+
+@app.post("/api/stt")
+async def api_stt(audio: UploadFile = File(...)):
+    """Transcribe uploaded audio to text via faster-whisper."""
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        return {"text": "", "error": "Empty audio"}
+    text = await asyncio.to_thread(transcribe_audio, audio_bytes)
+    return {"text": text}
+
+
+@app.get("/api/voice/config")
+async def api_voice_config():
+    """Get current voice configuration."""
+    return load_voice_config()
+
+
+@app.post("/api/voice/config")
+async def api_set_voice_config(request: Request):
+    """Update voice configuration (name, voice, enabled, auto_read)."""
+    data = await request.json()
+    config = load_voice_config()
+    for key in ("name", "voice", "enabled", "auto_read"):
+        if key in data:
+            config[key] = data[key]
+    save_voice_config(config)
+    return config
+
+
+@app.get("/api/voice/greeting")
+async def api_greeting():
+    """Get greeting context and generate greeting via LLM + TTS."""
+    ctx = get_greeting_context()
+    prompt = build_greeting_prompt(ctx)
+
+    # Use the chat LLM to generate greeting text
+    from dashboard.chat import stream_chat
+    messages = [{"role": "user", "content": "Starte Begrüßung."}]
+    base_url = state.lmstudio_url if state.backend == "lmstudio" else state.ollama_url
+
+    loop = asyncio.get_event_loop()
+    chunks = await loop.run_in_executor(
+        None,
+        lambda: list(stream_chat(
+            messages=messages,
+            model=state.model,
+            backend=state.backend,
+            base_url=base_url,
+            system=prompt,
+        ))
+    )
+    greeting_text = "".join(chunks).strip()
+
+    # Generate TTS for the greeting
+    voice = ctx.get("voice", load_voice_config().get("voice"))
+    audio_bytes = await generate_tts(greeting_text, voice)
+    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+    return {
+        "level": ctx["level"],
+        "agent_name": ctx["agent_name"],
+        "text": greeting_text,
+        "audio_b64": audio_b64,
+    }
+
+
+@app.post("/api/voice/talk")
+async def api_voice_talk(request: Request):
+    """Process user text in the L5 voice conversation with action classification."""
+    data = await request.json()
+    user_text = data.get("text", "").strip()
+    if not user_text:
+        return {"error": "No text provided"}
+
+    # Add user message to voice history
+    add_voice_message("user", user_text)
+
+    base_url = state.lmstudio_url if state.backend == "lmstudio" else state.ollama_url
+    loop = asyncio.get_event_loop()
+
+    # Step 1: Classify intent
+    classify_messages = build_classify_prompt(user_text)
+    classify_chunks = await loop.run_in_executor(
+        None,
+        lambda: list(stream_chat(
+            messages=classify_messages[1:],  # user message only
+            model=state.model,
+            backend=state.backend,
+            base_url=base_url,
+            system=classify_messages[0]["content"],  # system prompt
+        ))
+    )
+    intent = parse_action_intent("".join(classify_chunks))
+    logger.info(f"Voice intent: {intent} for: {user_text[:60]}")
+
+    action_result = None
+    system_prompt = get_voice_system_prompt()
+
+    # Step 2: Handle by intent
+    if intent == "IDENTITY":
+        # Extract and apply identity changes
+        updates = extract_identity_updates(user_text, "")
+        if updates:
+            changes_summary = apply_identity_updates(updates)
+            action_result = {"type": "identity_update", "changes": changes_summary}
+            # Reload system prompt with new identity
+            system_prompt = get_voice_system_prompt()
+            # Add context hint so LLM knows what changed
+            system_prompt += f"\n\nDu hast gerade deine Identität angepasst: {changes_summary}. Bestätige die Änderungen kurz."
+
+    elif intent == "SYSTEM":
+        # Gather system context and use enriched prompt
+        sys_ctx = get_system_context()
+        system_prompt = build_system_response_prompt(user_text, sys_ctx)
+        action_result = {"type": "system_query", "context": sys_ctx}
+
+    # Step 3: Generate response with conversation history
+    history = get_voice_history()
+    messages = [{"role": m["role"], "content": m["content"]} for m in history]
+
+    response_chunks = await loop.run_in_executor(
+        None,
+        lambda: list(stream_chat(
+            messages=messages,
+            model=state.model,
+            backend=state.backend,
+            base_url=base_url,
+            system=system_prompt,
+        ))
+    )
+    response_text = "".join(response_chunks).strip()
+
+    # Clean thinking tags from response
+    if "</think>" in response_text:
+        response_text = response_text.split("</think>")[-1].strip()
+
+    # Step 4: Post-processing - extract system actions from response
+    system_action = None
+    if "[ACTION:" in response_text:
+        import re
+        action_match = re.search(r'\[ACTION:(\w+)\]', response_text)
+        if action_match:
+            system_action = action_match.group(1)
+            response_text = re.sub(r'\s*\[ACTION:\w+\]\s*', ' ', response_text).strip()
+
+    # Add assistant response to voice history
+    add_voice_message("assistant", response_text)
+
+    # Generate TTS audio (use potentially updated voice config)
+    voice = load_voice_config().get("voice", "de-DE-KatjaNeural")
+    audio_bytes = await generate_tts(response_text, voice)
+    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+    result = {
+        "user_text": user_text,
+        "text": response_text,
+        "audio_b64": audio_b64,
+        "intent": intent,
+    }
+    if action_result:
+        result["action"] = action_result
+    if system_action:
+        result["system_action"] = system_action
+    return result
+
+
+@app.get("/api/voice/history")
+async def api_voice_history():
+    """Get the current voice conversation history."""
+    return {"messages": get_voice_history()}
+
+
+@app.post("/api/voice/clear")
+async def api_voice_clear():
+    """Clear voice conversation history."""
+    clear_voice_history()
+    return {"ok": True}

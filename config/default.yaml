@@ -49,3 +49,7 @@ tools:
   code_exec:
     enabled: false
     sandbox: true
+
+voice:
+  enabled: true
+  voice: "de-DE-KatjaNeural"       # de-DE-ConradNeural für männlich

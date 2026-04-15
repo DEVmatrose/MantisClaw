@@ -214,3 +214,54 @@ _Workpaper auto-ingested at session close._
 _Workpaper auto-ingested at session close._
 
 ---
+
+### 2026-04-15 | 2026-04-15-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-15-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-15T19:20:33.048378
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-15 | 2026-04-15-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-15-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-15T19:35:26.643766
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-15 | 2026-04-15-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-15-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-15T19:36:42.631904
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-15 | 2026-04-15-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-15-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-15T19:51:23.815310
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-15 | Voice Integration L5 (WP-VOICE)
+
+**Source:** `WORKPAPER/2026-04-15-voice-integration-dashboard.md`
+**Status:** DONE
+
+- Voice Assistant als L5 Layer im Dashboard (TTS/STT/VAD)
+- 2-Stage Action Classification Pipeline: IDENTITY / SYSTEM / CHAT
+- Identity-Handler: Name, Stimme, Persönlichkeit per Sprache konfigurierbar
+- System-Context: Projekt, Workpapers, Whitepapers in LLM-Prompts
+- VAD-Bugfix: Warmup, loudCount, Echo-Vermeidung
+- Whitepapers aktualisiert: CORE v0.4.0, TOOLS v0.4.0, IDENTITY §9
+- README v0.4.0: dashboard/ Baum, Layer-Model-Korrektur, Voice-Sektion
+
+---

@@ -35,7 +35,7 @@ Die Soul wird bei jedem Tick berechnet. Wie sie berechnet wird → WH-IDENTITY. 
 ├─────────────────────────────────────────┤
 │  L6  Security                           │  ← Audit, Permissions (Querschnitt)
 ├─────────────────────────────────────────┤
-│  L5  Skills (WORKING/TOOLS/skills/)     │  ← Orchestrierung, Procedural Memory
+│  L5  Skills + Voice (TOOLS/ + dashboard/)│  ← Orchestrierung, Procedural Memory, Voice Assistant
 ├─────────────────────────────────────────┤
 │  L4  Tool-Registry (core/registry/)     │  ← Alle Fähigkeiten, inkl. Körper-Zugriff
 ├─────────────────────────────────────────┤
@@ -220,6 +220,57 @@ Lädt Skill-Dateien aus `WORKING/TOOLS/skills/` und führt mehrstufige Workflows
 Ein Skill besteht aus YAML-Frontmatter + Markdown-Anleitung.
 Der Skill-Executor löst Tool-Calls pro Schritt auf und delegiert an die Registry.
 
+### 4.7b Voice Assistant — Sprachinteraktion (L5)
+
+> **Status:** Implementiert (Phase 2 abgeschlossen, Phase 3 in Arbeit)
+
+Der Voice Assistant ist ein **separater Kommunikationskanal** auf L5-Ebene. Er ist bewusst von den Projekt-Conversations (Center-Chat) getrennt.
+
+**Architektur-Prinzip:** Conversations gehören zu Projekten/Workpapers (Arbeitskontexte). Der Voice Assistant ist ein Assistenten-Kanal für direkte Interaktion, Systembefehle und Identitäts-Konfiguration.
+
+**Komponenten:**
+- `dashboard/voice.py` — Backend: TTS (edge-tts), STT (faster-whisper), Voice-Config, Greeting-Logic, Action-Classifier, Identity-Handler
+- L5 Box in linker Sidebar (HTML/JS) — Toggle ON/OFF, Voice-Chat-Log, VAD-Loop
+- Voice-Config persistent in `data/voice_config.json` (Name, Stimme, Stil)
+
+**Zwei-Stufen-Pipeline (Action Classification):**
+```
+User spricht → STT → Text
+    → Intent-Classifier (LLM): IDENTITY | SYSTEM | CHAT
+    → Handler:
+        IDENTITY → Regex-Extraktion (Name, Voice, Style) → Config-Update → Bestätigung
+        SYSTEM   → Enriched Context (Projekt, Workpapers, Whitepapers) → Antwort
+        CHAT     → Normale Voice-Konversation
+    → Response + TTS → Audio abspielen
+    → Loop: VAD wartet auf nächste Sprache
+```
+
+**Verhalten:**
+- **AUS (Standard):** Stumm & taub. Kein Mic, kein TTS.
+- **AN:** Mic öffnet → Greeting → VAD-Loop (setInterval 100ms, Stille 2.5s) → STT → LLM → TTS → Loop
+- **Observer (geplant):** Heartbeat-getriggert, analysiert Voice-Chat auf projektrelevante Infos → Workpaper-Updates über L4-Tools
+
+**API-Endpoints:**
+- `POST /api/tts` — Text → MP3 (base64)
+- `POST /api/stt` — Audio → Text
+- `GET/POST /api/voice/config` — Assistenten-Identität (Name, Stimme, Stil)
+- `GET /api/voice/greeting` — 3-Ebenen-Greeting (first_start, new_session, resume)
+- `POST /api/voice/talk` — User-Text → Intent → Action → Response + TTS
+- `GET /api/voice/history` — Voice-Chat-History
+- `POST /api/voice/clear` — History leeren
+
+**Schichten-Zuordnung:**
+| Komponente      | Schicht | Begründung |
+|-----------------|---------|------------|
+| Voice ON/OFF    | L5      | Skill-Orchestrierung |
+| TTS/STT         | L4      | Registrierte Tools |
+| Intent-Router   | L5      | Skill (Orchestrierung) |
+| Observer        | L3      | Bestandteil des Loops |
+| Workpaper-Write | L4→L2   | Über filesystem-Tool |
+| Greeting/Name   | L1      | Identity (voice_config) |
+
+**Referenz-Workpaper:** `WP-VOICE` (2026-04-15-voice-integration-dashboard.md)
+
 ### 4.8 llm.py — LLM-Backend (L0)
 
 Abstraktion über LLM-Provider. **Local-first** — keine externen Dependencies.
@@ -379,8 +430,8 @@ MantisClaw hat ein **Web-Dashboard** als Benutzeroberfläche.
 
 ```
 MantisClaw (Core + Identity + Working + Dashboard)
-    ├── WH-CORE     — Runtime, Loop, Gehirn, Dashboard (dieses Dokument)
-    ├── WH-IDENTITY  — Emergente Identität, soul(t)
+    ├── WH-CORE     — Runtime, Loop, Gehirn, Dashboard, Voice Assistant (dieses Dokument)
+    ├── WH-IDENTITY  — Emergente Identität, soul(t), Assistenten-Identität
     ├── WH-WORKING   — Arbeitsstruktur, Memory, AAMS
     ├── WH-TOOLS     — Tool-Registry, Skills, Körper-Interface (L4/L5)
     ├── AAMS         — Workspace-Standard (fest integriert, v1.3.0)
@@ -399,7 +450,10 @@ MantisClaw (Core + Identity + Working + Dashboard)
 6. Context Loader als Tool (JIT Loading über Registry)
 7. ~~Planner/Executor/Observer~~ → ✅ Implementiert + Tool-Injection + Fuzzy-Matching
 8. Reflection-Loop (RFL) implementieren — reflect.py ist Stub
-9. Tests
+9. Tests → ✅ 19 pytest Tests (17 Unit + 2 Integration)
 10. Dashboard ↔ Runtime Integration vertiefen (gemeinsamer Prozess)
+11. ~~Voice Assistant (L5)~~ → ✅ Phase 1+2 fertig (TTS, STT, L5-Box, VAD, Action-Classifier)
+12. Voice Observer Integration: Heartbeat-basierte Analyse des Voice-Chats
+13. Voice System-Actions ausführen (CREATE_WORKPAPER, OPEN_CONVERSATION etc.)
 
 *Whitepaper. Stabile Architektur-Wahrheit. Wird bei Architektur-Entscheidungen aktualisiert.*

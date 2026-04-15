@@ -6,8 +6,8 @@
   <img src="docs/mantisclaw-overview.png" alt="MantisClaw Overview" width="700">
 </p>
 
-**Version:** 0.1.0  
-**Status:** IN DEVELOPMENT  
+**Version:** 0.4.0
+**Status:** IN DEVELOPMENT
 **GitHub:** [DEVmatrose/MantisClaw](https://github.com/DEVmatrose/MantisClaw)  
 **Author:** [@ogerly](https://github.com/ogerly) · [DEVmatrose](https://github.com/DEVmatrose)  
 **Part of:** [Mantis Family](https://github.com/DEVmatrose)  
@@ -66,6 +66,16 @@ MantisClaw/
 │   ├── decentral.md.example    ← Trust-Map: Nodes
 │   └── hook.md.example         ← Trigger Definitions
 │
+├── dashboard/                  ← Web-UI (FastAPI + SSE)
+│   ├── app.py                  ← FastAPI routes + voice endpoints
+│   ├── chat.py                 ← Chat logic + SSE streaming
+│   ├── db.py                   ← SQLite (aiosqlite) persistence
+│   ├── voice.py                ← Voice backend (TTS, STT, Action Classifier)
+│   ├── templates/
+│   │   └── index.html          ← Single-page dashboard (Jinja2)
+│   └── static/
+│       └── style.css           ← Dashboard styles
+│
 ├── WORKSPACE/                  ← AAMS Body (L2)
 │   └── WORKING/                ← Construction Memory
 │       ├── WHITEPAPER/         ← Architectural Truth
@@ -78,6 +88,8 @@ MantisClaw/
 │       ├── PROJECT/            ← Project Definitions (project.yaml)
 │       └── TOOLS/              ← Skills (Orchestration Recipes)
 │           └── skills/         ← Markdown+YAML Workflows
+│
+├── data/                       ← Runtime data (voice_config.json)
 │
 └── config/                     ← Configuration
 ```
@@ -150,10 +162,11 @@ L1  Identity                → identity/ (soul(t) calculation)
 L2  AAMS Body               → WORKING/ (passive, access via tools only)
 L3  Runtime / Loop          → core/ (planner, executor, observer, reflect)
 L4  Tool-Registry           → core/registry/ (Whitelist, incl. body access)
-L5  Security                → Cross-cutting (Security levels per tool)
+L5  Skills + Voice          → WORKING/TOOLS/skills/ + dashboard/voice.py
+L6  Security                → Cross-cutting (Security levels per tool)
 ```
 
-> In **Mantis-OS**, L6 (Network/MantisNostr) and Skills (WORKING/TOOLS/skills/) are added.
+> In **Mantis-OS**, L7 (Network/MantisNostr) is added.
 
 > **Core Rule:** L3 (Loop) never touches L2 (Body) directly. Every access to WORKING/ runs through a registered tool in L4.
 
@@ -232,15 +245,56 @@ Open **http://localhost:8080** — the dashboard displays:
 │ L2 Identity │        Chat with the Agent       │ R2 Project    │
 │ L3 Runtime  │        (SSE-Streaming)           │ R3 Workpapers │
 │ L4 Tools    │                                  │ R4 Workspace  │
+│ L5 Voice    │                                  │               │
 └─────────────┴──────────────────────────────────┴───────────────┘
 ```
 
-  - **Left (Agent):** L1 Core (Backend/Model-Switcher), L2 Identity (soul(t) + Inspector), L3 Runtime (Health + Live Tick Feed + Prompt Inspector), L4 Tools (Registry)
+  - **Left (Agent):** L1 Core (Backend/Model-Switcher), L2 Identity (soul(t) + Inspector), L3 Runtime (Health + Live Tick Feed + Prompt Inspector), L4 Tools (Registry), L5 Voice Assistant (VAD + TTS/STT + Action Classifier)
   - **Center:** Chat interface with SSE streaming (token-by-token)
   - **Right (AAMS):** R1 Chat history, R2 Project + Milestones, R3 Workpapers (with closed-toggle), R4 Workspace tree + WP preview
   - **Model-Switcher:** Live switching between LM Studio / Ollama models
   - **Identity Inspector:** Shows all 6 identity files (base, agenda, account, social, decentral, hook) in tabs
   - **Prompt Inspector:** Latest LLM prompts (System/User/Response) for analysis
+
+-----
+
+## Voice Assistant (L5)
+
+The dashboard includes a **voice-first assistant** in the L5 sidebar box. Speech is captured via browser-based VAD (Voice Activity Detection) and processed through a 2-stage pipeline:
+
+```
+Mic → VAD → STT (faster-whisper) → Intent Classifier → Handler → LLM → TTS (edge-tts) → Speaker
+```
+
+### Intent Classification
+
+Every voice input is classified by the LLM into one of three intents:
+
+| Intent | Action | Example |
+|--------|--------|---------|
+| **IDENTITY** | Update assistant name, voice, personality | "Nenn dich Mantes" |
+| **SYSTEM** | Query project state, workpapers, runtime | "In welchem Projekt sind wir?" |
+| **CHAT** | Normal conversation | "Wie geht es dir?" |
+
+### Voice Config
+
+The assistant identity is persisted in `data/voice_config.json`:
+- **name** — Assistant name (default: "MantisClaw")
+- **voice_type** — male / female → selects TTS voice
+- **personality** — Personality description
+- **speech_speed** — fast / normal / slow
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/tts` | POST | Text-to-Speech (edge-tts) |
+| `/api/stt` | POST | Speech-to-Text (faster-whisper) |
+| `/api/voice/config` | GET/POST | Read/update voice config |
+| `/api/voice/greeting` | GET | Context-aware greeting |
+| `/api/voice/talk` | POST | Full pipeline: STT → classify → handle → respond → TTS |
+| `/api/voice/history` | GET | Voice conversation history |
+| `/api/voice/clear` | POST | Clear voice history |
 
 -----
 
@@ -253,6 +307,7 @@ Open **http://localhost:8080** — the dashboard displays:
 | Identity | ✅ All files local in `identity/` |
 | LLM Backend | ✅ LM Studio (default) / Ollama / Cloud optional |
 | Dashboard | ✅ Web-UI on localhost:8080 (FastAPI + SSE + Live Tick Feed) |
+| Voice Assistant | ✅ L5 Voice (TTS/STT, VAD, Intent Classification) |
 | Idle Detection | ✅ Identical plans skipped after 3 repetitions |
 | Prompt Logging | ✅ JSONL-based, inspectable via Dashboard |
 | Deployment | ✅ Single repo, runs standalone |
@@ -311,6 +366,7 @@ Link: [https://github.com/DEVmatrose/Mantis-OS](https://github.com/DEVmatrose/Ma
 | [WH-IDENTITY](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/IDENTITY.md) | Emergent Identity — soul(t) |
 | [WH-WORKING](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/WORKING.md) | AAMS Body — the Body |
 | [WH-TOOLS](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/TOOLS.md) | Tool Registry, Skills & Body Interface |
+| [WH-PROJECT](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/PROJECT.md) | Project Definitions & Milestones |
 
 See `WORKSPACE/WORKING/WORKPAPER/` for active session work.
 

@@ -1,0 +1,7 @@
+{
+  "name": "Mantis",
+  "voice": "de-DE-KatjaNeural",
+  "enabled": true,
+  "auto_read": false,
+  "personality": "schnell und direkt"
+}

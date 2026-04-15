@@ -156,6 +156,8 @@ Tool = {
 | `filesystem` | `read_file`, `write_file`, `append_file`, `list_dir`, `workspace_status` | Dateisystem (Pfad-validiert) | ✅ |
 | `memory` | `query_memory`, `log_diary` | WORKING/MEMORY/, WORKING/DIARY/ | ✅ |
 | `analysis` | `analyze`, `summarize` | LLM-Backend (L0) | ✅ |
+| `voice` | `tts`, `stt`, `voice_config`, `voice_talk`, `voice_greeting` | Dashboard Voice (L5) | ✅ |
+| `voice_action` | `classify_intent`, `identity_update` | Voice Action Pipeline (L5) | ✅ |
 
 **Geplant (Design):**
 
@@ -641,3 +643,4 @@ Wie weit wird WH-CORE angepasst?
 | 0.2.0 | 2026-04-10 | Implementation-Status: 8 Tools, Registry API, Security-Levels (int), Fuzzy-Matching. Design vs. Realität synchronisiert. |
 | 0.2.1 | 2026-04-10 | 9 Tools (workspace_status hinzu). log_diary gehärtet: Dedup + Rate-Limit (3/Tag) + 120-Zeichen-Limit. analyze/summarize Level 2→1 korrigiert. |
 | 0.3.0 | 2026-04-15 | 13 Tools: +llm_management (list_models, switch_model), +loop_monitor (loop_monitor, token_budget). Struktur-Dokumentation aktualisiert. |
+| 0.4.0 | 2026-04-15 | +Voice-Tools (L5): TTS, STT, Voice-Config, Voice-Talk, Greeting, Action-Classifier, Identity-Handler. Voice Assistant als L5-Erweiterung dokumentiert. Whitepapers in System-Context integriert. |

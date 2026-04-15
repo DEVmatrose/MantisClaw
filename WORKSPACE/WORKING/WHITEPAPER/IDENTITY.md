@@ -10,7 +10,7 @@
 
 ## 1. Zusammenfassung
 
-MantisClaw's Identität ist **emergent** — sie wird nie geschrieben, sondern bei jedem Tick berechnet. Die Soul ist eine Funktion aus unveränderlichen Konstanten, der aktiven Agenda und dem Arbeitskontext. Ein Agent der codet hat eine andere Soul als einer der tradet, aber beide teilen dieselbe `base.md`.
+MantisClaw's Identität ist **emergent** — sie wird nie geschrieben, sondern bei jedem Tick berechnet. Der Agnet nennt sich selber immer "Mantis". Die Soul ist eine Funktion aus unveränderlichen Konstanten, der aktiven Agenda und dem Arbeitskontext. Ein Agent der codet hat eine andere Soul als einer der tradet, aber beide teilen dieselbe `base.md`.
 
 Das unterscheidet MantisClaw von anderen Frameworks: Wo SOUL.md eine statische Datei ist, ist `soul(t)` eine **Berechnung**. Die Identität ist kein Zustand — sie ist ein Prozess.
 
@@ -238,6 +238,54 @@ WH-WORKING (Arbeitsstruktur)
 - **WH-CORE** beschreibt den Loop der `soul(t)` nutzt — aber nicht wie die Soul berechnet wird
 - **WH-WORKING** beschreibt den Workspace der als `working_context` in die Soul fließt
 - **WH-IDENTITY** (dieses Dokument) ist die Brücke: Wie die Dateien zur Soul werden
+
+---
+
+## 9. Assistenten-Identität (Voice Layer)
+
+> **Hinzugefügt:** 2026-04-15 | **Status:** Implementiert
+
+Die Assistenten-Identität ist eine **Erweiterung der Agent-Identität** für die Sprachinteraktion (L5 Voice Assistant). Sie ist bewusst getrennt von `soul(t)` — die Soul ist das Denken, die Assistenten-Identität ist das Sprechen.
+
+### Persistenz
+
+Gespeichert in `data/voice_config.json`:
+```json
+{
+    "name": "Mantes",
+    "voice": "de-DE-KatjaNeural",
+    "personality": "schnell und direkt",
+    "enabled": true,
+    "auto_read": false
+}
+```
+
+### Felder
+
+| Feld | Typ | Beschreibung | Herkunft |
+|------|-----|-------------|----------|
+| `name` | str | Rufname des Assistenten | User setzt per Voice ("nenn dich Mantes") |
+| `voice` | str | TTS-Stimme (edge-tts Voice-ID) | User wählt Geschlecht per Voice |
+| `personality` | str | Sprachstil-Beschreibung | User beeinflusst per Voice ("schneller") |
+| `enabled` | bool | Voice aktiviert | Toggle in UI |
+
+### Beziehung zu soul(t)
+
+```
+identity/base.md  → soul(t)  → Wie der Agent **denkt**
+data/voice_config  → assistant_identity  → Wie der Agent **spricht**
+```
+
+Die Assistenten-Identität beeinflusst:
+- System-Prompt des Voice-Chats (Name, Persönlichkeit)
+- TTS-Stimme (männlich/weiblich)
+- Greeting-Verhalten (3 Ebenen)
+
+Sie wird **nicht** in `soul(t)` eingerechnet, ist aber für den User die wahrnehmbare Persönlichkeit.
+
+### Identity-Update per Voice
+
+Änderungen an der Assistenten-Identität werden per Voice-Befehl (IDENTITY-Intent) vorgenommen. Der Action-Classifier erkennt Identitäts-Befehle, ein Regex-Parser extrahiert Name/Voice/Style, und die Config wird sofort persistiert.
 
 ---
 

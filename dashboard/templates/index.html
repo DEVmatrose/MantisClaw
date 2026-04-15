@@ -86,6 +86,23 @@
                     <span class="muted">Loading tools...</span>
                 </div>
             </div>
+
+            <!-- L5: VOICE ASSISTANT -->
+            <div class="box" id="box-L5">
+                <div class="box-header">
+                    L5 · Voice Assistant
+                    <button id="voiceToggle" class="voice-power-btn" onclick="toggleVoiceAssistant()" title="Voice Assistant ein/aus">⚫ OFF</button>
+                </div>
+                <div class="box-body">
+                    <div id="voiceChatLog" class="voice-chat-log">
+                        <span class="muted" id="voiceStatus">Voice Assistant aus</span>
+                    </div>
+                    <div id="voiceIndicator" class="voice-indicator" style="display:none">
+                        <span class="voice-indicator-dot"></span>
+                        <span id="voiceStateText">Standby</span>
+                    </div>
+                </div>
+            </div>
         </aside>
 
         <!-- CENTER — Chat -->
@@ -104,6 +121,10 @@
                     <div class="message {{ msg.role }}">
                         <div class="message-role">{{ msg.role }}</div>
                         <div class="message-content">{{ msg.content | replace('<think>', '<details class="thinking-block"><summary>💭 Thinking...</summary><div class="thinking-content">') | replace('</think>', '</div></details>') | safe }}</div>
+                        <div class="message-actions">
+                            <button class="msg-action-btn" onclick="copyMessage(this)" title="Copy">📋</button>
+                            <button class="msg-action-btn" onclick="readAloud(this)" title="Read aloud">🔊</button>
+                        </div>
                     </div>
                     {% endfor %}
                     <div id="streamTarget" class="message assistant" style="display:none">
@@ -562,6 +583,294 @@ body.innerHTML = '<span class="muted">Loading...</span>';
     }
     pollTicks();
     setInterval(pollTicks, 10000);
+
+    // ========== L5 VOICE ASSISTANT ==========
+    let voiceActive = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioContext = null;
+    let analyser = null;
+    let activeStream = null;
+    let vadInterval = null;
+    let isSpeaking = false;
+    let silenceStart = null;
+    let currentAudio = null;
+    const VOLUME_THRESHOLD = 5;
+    const SILENCE_THRESHOLD_MS = 2500;
+
+    function addVoiceMessage(text, role) {
+        if (!text) return;
+        const log = document.getElementById('voiceChatLog');
+        const status = document.getElementById('voiceStatus');
+        if (status) status.style.display = 'none';
+        const div = document.createElement('div');
+        div.className = 'voice-msg voice-msg-' + role;
+        div.innerHTML = '<span class="voice-msg-role">' + role + '</span>' +
+            '<span class="voice-msg-text">' + escHtml(text) + '</span>' +
+            '<button class="msg-action-btn" onclick="copyMessage(this)" title="Copy">📋</button>' +
+            '<button class="msg-action-btn" onclick="readAloud(this)" title="Read aloud">🔊</button>';
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function setVoiceState(text) {
+        const el = document.getElementById('voiceStateText');
+        if (el) el.textContent = text;
+    }
+
+    async function playAudioResponse(base64Audio) {
+        return new Promise((resolve) => {
+            if (!base64Audio) { resolve(); return; }
+            const audio = new Audio('data:audio/mp3;base64,' + base64Audio);
+            currentAudio = audio;
+            setVoiceState('Mantis spricht...');
+            audio.onended = () => { currentAudio = null; setVoiceState('Hört zu...'); resolve(); };
+            audio.onerror = () => { currentAudio = null; resolve(); };
+            audio.play().catch(() => resolve());
+        });
+    }
+
+    async function toggleVoiceAssistant() {
+        if (voiceActive) {
+            disableVoice();
+        } else {
+            enableVoice();
+        }
+    }
+
+    async function enableVoice() {
+        voiceActive = true;
+        const btn = document.getElementById('voiceToggle');
+        const indicator = document.getElementById('voiceIndicator');
+        btn.textContent = '🔴 ON';
+        btn.classList.add('voice-on');
+        indicator.style.display = 'flex';
+        setVoiceState('Starte...');
+
+        // Short ready-beep via greeting
+        try {
+            const resp = await fetch('/api/voice/greeting');
+            const data = await resp.json();
+            if (data.text) {
+                addVoiceMessage(data.text, 'assistant');
+                await playAudioResponse(data.audio_b64);
+            }
+        } catch(e) {
+            addVoiceMessage('Ich bin bereit.', 'assistant');
+        }
+
+        // Start VAD loop (Voice Agent pattern)
+        await startVADLoop();
+    }
+
+    function disableVoice() {
+        voiceActive = false;
+        const btn = document.getElementById('voiceToggle');
+        const indicator = document.getElementById('voiceIndicator');
+        btn.textContent = '⚫ OFF';
+        btn.classList.remove('voice-on');
+        indicator.style.display = 'none';
+
+        // Cleanup
+        if (vadInterval) { clearInterval(vadInterval); vadInterval = null; }
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.onstop = null;
+            mediaRecorder.stop();
+        }
+        if (activeStream) {
+            activeStream.getTracks().forEach(t => t.stop());
+            activeStream = null;
+        }
+        if (audioContext && audioContext.state !== 'closed') {
+            audioContext.close();
+            audioContext = null;
+        }
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        mediaRecorder = null;
+
+        // Clear server-side history
+        fetch('/api/voice/clear', {method: 'POST'});
+        setVoiceState('Standby');
+    }
+
+    async function startVADLoop() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('Kein Mikrofon-Zugriff im Browser!');
+            disableVoice();
+            return;
+        }
+        try {
+            activeStream = await navigator.mediaDevices.getUserMedia({audio: true});
+        } catch(e) {
+            alert('Mikrofon-Zugriff fehlgeschlagen.');
+            disableVoice();
+            return;
+        }
+
+        mediaRecorder = new MediaRecorder(activeStream, {mimeType: 'audio/webm'});
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') await audioContext.resume();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.1;
+        const mic = audioContext.createMediaStreamSource(activeStream);
+        mic.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            if (vadInterval) { clearInterval(vadInterval); vadInterval = null; }
+            if (audioChunks.length === 0) {
+                if (voiceActive) startRecordingSession();
+                return;
+            }
+            setVoiceState('Verarbeite Audio...');
+            const blob = new Blob(audioChunks, {type: 'audio/webm'});
+            audioChunks = [];
+            await sendVoiceAudio(blob);
+            if (voiceActive) startRecordingSession();
+        };
+
+        function startRecordingSession() {
+            if (!voiceActive) return;
+            isSpeaking = false;
+            silenceStart = null;
+            audioChunks = [];
+            setVoiceState('Hört zu...');
+            mediaRecorder.start();
+
+            // Warmup: ignore first 800ms after start (avoid TTS echo)
+            let warmup = true;
+            let loudCount = 0;
+            setTimeout(() => { warmup = false; }, 800);
+
+            vadInterval = setInterval(() => {
+                if (warmup) return;
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                const avg = sum / dataArray.length;
+
+                if (avg > VOLUME_THRESHOLD) {
+                    if (!isSpeaking) {
+                        loudCount++;
+                        // Require 3 consecutive loud frames to confirm speech
+                        if (loudCount >= 3) {
+                            isSpeaking = true;
+                            loudCount = 0;
+                        }
+                    }
+                    silenceStart = null;
+                    if (isSpeaking) setVoiceState('Nimmt auf...');
+                } else {
+                    loudCount = 0;
+                    if (isSpeaking) {
+                        if (!silenceStart) silenceStart = Date.now();
+                        if (Date.now() - silenceStart > SILENCE_THRESHOLD_MS) {
+                            if (mediaRecorder.state === 'recording') {
+                                mediaRecorder.stop();
+                            }
+                        }
+                    }
+                }
+            }, 100);
+        }
+
+        startRecordingSession();
+    }
+
+    async function sendVoiceAudio(blob) {
+        // 1. STT
+        const form = new FormData();
+        form.append('audio', blob, 'recording.webm');
+        try {
+            const sttResp = await fetch('/api/stt', {method: 'POST', body: form});
+            const sttData = await sttResp.json();
+            const userText = (sttData.text || '').trim();
+            if (!userText || userText.length < 2) return;
+
+            addVoiceMessage(userText, 'user');
+
+            // 2. LLM + TTS
+            const talkResp = await fetch('/api/voice/talk', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({text: userText})
+            });
+            const talkData = await talkResp.json();
+
+            if (talkData.text) {
+                addVoiceMessage(talkData.text, 'assistant');
+                await playAudioResponse(talkData.audio_b64);
+            }
+            // Show intent indicator
+            if (talkData.intent && talkData.intent !== 'CHAT') {
+                const badge = talkData.intent === 'IDENTITY' ? '🪪' : '⚙️';
+                const lastMsg = document.querySelector('#voiceChatLog .voice-msg:last-child');
+                if (lastMsg) {
+                    const tag = document.createElement('span');
+                    tag.className = 'voice-intent-badge';
+                    tag.title = talkData.intent;
+                    tag.textContent = badge;
+                    lastMsg.prepend(tag);
+                }
+            }
+            // Handle system actions
+            if (talkData.system_action) {
+                console.log('Voice system action:', talkData.system_action);
+                // Future: execute system actions (CREATE_WORKPAPER, OPEN_CONVERSATION, etc.)
+            }
+        } catch(e) {
+            console.error('Voice pipeline error:', e);
+        }
+    }
+
+    // --- Message action helpers (work for both chat and voice messages) ---
+    function copyMessage(btn) {
+        const container = btn.closest('.message') || btn.closest('.voice-msg') || btn.closest('.greeting-message');
+        const content = container.querySelector('.message-content') || container.querySelector('.voice-msg-text');
+        if (content) {
+            navigator.clipboard.writeText(content.innerText).then(() => {
+                btn.textContent = '✅';
+                setTimeout(() => { btn.textContent = '📋'; }, 1500);
+            });
+        }
+    }
+
+    function readAloud(btn) {
+        const container = btn.closest('.message') || btn.closest('.voice-msg') || btn.closest('.greeting-message');
+        const content = container.querySelector('.message-content') || container.querySelector('.voice-msg-text');
+        if (content) {
+            playTTS(content.innerText);
+            btn.textContent = '⏳';
+            setTimeout(() => { btn.textContent = '🔊'; }, 3000);
+        }
+    }
+
+    async function playTTS(text) {
+        if (!text.trim()) return;
+        try {
+            const resp = await fetch('/api/tts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({text: text})
+            });
+            const data = await resp.json();
+            if (data.audio_b64) {
+                const audio = new Audio('data:audio/mp3;base64,' + data.audio_b64);
+                currentAudio = audio;
+                audio.play();
+                audio.onended = () => { currentAudio = null; };
+            }
+        } catch(e) { console.error('TTS error:', e); }
+    }
+
+    // Greeting lives in L5 Voice Assistant only — no center chat greeting
     </script>
 
 <!-- Identity Inspector Modal -->

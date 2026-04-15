@@ -32,6 +32,7 @@ from core.registry.tools.memory import create_memory_tools
 from core.registry.tools.analysis import create_analysis_tools
 from core.registry.tools.llm_management import create_llm_management_tools
 from core.registry.tools.loop_monitor import create_loop_monitor_tools
+from core.voice import VoiceOutput
 
 logger = logging.getLogger("mantisclaw.runtime")
 
@@ -155,6 +156,13 @@ class MantisClaw:
 
         # Idle detection
         self._idle_skip_after = self.config.get("runtime", {}).get("idle_skip_after", 3)
+
+        # Voice output
+        voice_cfg = self.config.get("voice", {})
+        self.voice = VoiceOutput(
+            voice=voice_cfg.get("voice", "de-DE-KatjaNeural"),
+            enabled=voice_cfg.get("enabled", True),
+        )
         self._last_plan_hash: str = ""
         self._repeat_count: int = 0
         self._tick_summaries: list[str] = []  # Last N tick summaries for planner
@@ -330,6 +338,15 @@ class MantisClaw:
             )
             # Keep only last 5
             self._tick_summaries = self._tick_summaries[-5:]
+
+            # 10. Voice tick summary
+            voice_summary = (
+                f"Tick {self.tick_count} fertig. "
+                f"{metrics.steps_succeeded} von {metrics.steps_total} Schritte erfolgreich."
+            )
+            if metrics.anomalies:
+                voice_summary += f" {len(metrics.anomalies)} Anomalien."
+            await self.voice.speak(voice_summary)
         else:
             logger.info("No steps to execute this tick.")
 
@@ -344,6 +361,9 @@ class MantisClaw:
         if self.config.get("aams", {}).get("auto_workpaper", True):
             self.session.open(topic="runtime-loop")
 
+        # Voice startup announcement
+        await self._startup_announcement()
+
         try:
             while self.running:
                 await self.tick()
@@ -352,6 +372,62 @@ class MantisClaw:
             logger.info("Runtime cancelled.")
         finally:
             self._shutdown()
+
+    async def _startup_announcement(self):
+        """Announce startup with project awareness."""
+        tools_count = len(self.registry.list_tools())
+        workpaper_dir = self.workspace_path / "WORKING" / "WORKPAPER"
+
+        # Find open project workpapers (not our own runtime-loop)
+        project_wps = []
+        for wp in workpaper_dir.glob("*.md"):
+            if "runtime-loop" in wp.name or wp.name == "README.md":
+                continue
+            try:
+                header = wp.read_text(encoding="utf-8")[:500]
+                if "**Status:** OPEN" in header:
+                    project_wps.append(wp)
+            except Exception:
+                continue
+
+        if project_wps:
+            latest = max(project_wps, key=lambda f: f.stat().st_mtime)
+            # Extract topic from filename: YYYY-MM-DD-topic.md
+            parts = latest.stem.split("-", 3)
+            topic = parts[3] if len(parts) > 3 else latest.stem
+            # Read last few lines for context
+            try:
+                lines = latest.read_text(encoding="utf-8").strip().splitlines()
+                last_actions = [l for l in lines[-10:] if l.startswith("| ")]
+                last_note = last_actions[-1].split("|")[3].strip() if last_actions else ""
+            except Exception:
+                last_note = ""
+
+            msg = (f"Mantis online. {tools_count} Tools bereit. "
+                   f"Offenes Projekt: {topic.replace('-', ' ')}. "
+                   f"Letzter Stand: {last_note}. " if last_note else
+                   f"Mantis online. {tools_count} Tools bereit. "
+                   f"Offenes Projekt: {topic.replace('-', ' ')}. ")
+            msg += "Warte auf Instruktionen."
+        else:
+            # Check closed workpapers for most recent work
+            closed_dir = workpaper_dir / "closed"
+            recent = ""
+            if closed_dir.exists():
+                closed_wps = sorted(closed_dir.glob("*.md"),
+                                    key=lambda f: f.stat().st_mtime, reverse=True)
+                if closed_wps:
+                    parts = closed_wps[0].stem.split("-", 3)
+                    recent = parts[3].replace("-", " ") if len(parts) > 3 else ""
+
+            msg = (f"Mantis online. {tools_count} Tools bereit. "
+                   f"Kein offenes Projekt. ")
+            if recent:
+                msg += f"Zuletzt wurde an {recent} gearbeitet. "
+            msg += "Was steht heute an?"
+
+        logger.info(f"Startup: {msg}")
+        await self.voice.speak(msg)
 
     def _shutdown(self):
         logger.info(f"Shutting down. Total ticks: {self.tick_count}. Health: {self.observer.health}")
