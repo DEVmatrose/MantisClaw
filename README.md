@@ -52,9 +52,11 @@ MantisClaw/
 │       ├── __init__.py         ← ToolRegistry + Tool Classes
 │       ├── registry.py         ← Whitelist, Security-Levels, Fuzzy-Resolve
 │       └── tools/              ← Tool Implementations
-│           ├── filesystem.py   ← read_file, write_file, list_dir, workspace_status
+│           ├── filesystem.py   ← read_file, write_file, append_file, list_dir, workspace_status
 │           ├── memory.py       ← query_memory, log_diary
-│           └── analysis.py     ← analyze, summarize (LLM-powered)
+│           ├── analysis.py     ← analyze, summarize (LLM-powered)
+│           ├── llm_management.py ← list_models, switch_model
+│           └── loop_monitor.py ← loop_monitor, token_budget
 │
 ├── identity/                   ← Emergent Identity (L1)
 │   ├── base.md.example         ← Constants: Name, Ethics, Keys
