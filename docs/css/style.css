@@ -315,14 +315,14 @@ footer { position: relative; z-index: 1; text-align: center; padding: 44px 32px 
 
 /* Mobile */
 @media (max-width: 640px) {
-  .hero { padding: 48px 16px 32px; min-height: auto; }
-  .hero-inner { max-width: 100%; padding: 0; }
+  .hero { padding: 48px 12px 32px; min-height: auto; }
+  .hero-inner { max-width: 100%; padding: 0; box-sizing: border-box; }
   .hero-glow { width: 400px; height: 300px; top: -80px; }
   .hero-grid { background-size: 32px 32px; }
-  h1 { font-size: 36px; letter-spacing: -.02em; }
+  h1 { font-size: clamp(28px, 10vw, 44px); letter-spacing: -.02em; word-break: break-word; }
   .tagline { font-size: 13px; letter-spacing: .03em; }
-  .soul-formula { padding: 12px 14px; font-size: 10px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-  .soul-label { font-size: 10px; }
+  .soul-formula { padding: 12px 14px; font-size: 10px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; max-width: 100%; box-sizing: border-box; }
+  .soul-label { font-size: 10px; white-space: normal; }
   .badge-row { gap: 5px; margin-bottom: 20px; }
   .badge { font-size: 10px; padding: 3px 7px; }
   .cta-row { flex-direction: column; align-items: stretch; gap: 10px; }
