@@ -1,9 +1,9 @@
 # WHITEPAPER: MantisClaw Core — Runtime & Loop
 
 **Dokument:** WH-CORE
-**Version:** 0.3.0
+**Version:** 0.4.0
 **Erstellt:** 2026-04-08
-**Aktualisiert:** 2026-04-10
+**Aktualisiert:** 2026-04-15
 **Status:** DRAFT
 **Herkunft:** WP-005 (Bootstrap), WP-RFL, WP-JIT-Context, SCIENCE-Review, WP-TOOL-DASH
 
@@ -393,7 +393,7 @@ MantisClaw (Core + Identity + Working + Dashboard)
 
 1. ~~Core-Module implementieren (runtime.py Loop zuerst)~~ → ✅ Grundgerüst vorhanden
 2. ~~LLM-Backend-Abstraktion (llm.py)~~ → ✅ Fertig (LM Studio + Ollama + Cloud)
-3. ~~Tool-Registry Skelett (core/registry/)~~ → ✅ 9 Tools registriert, Fuzzy-Matching
+3. ~~Tool-Registry Skelett (core/registry/)~~ → ✅ 13 Tools registriert (filesystem 5 + memory 2 + analysis 2 + llm_management 2 + loop_monitor 2), Fuzzy-Matching
 4. Body-Access-Tools registrieren (session, workpaper, ltm, context) → `core/` Module existieren, Migration zu Registry-Tools ausstehend
 5. Skill-Executor (skill_executor.py) implementieren
 6. Context Loader als Tool (JIT Loading über Registry)

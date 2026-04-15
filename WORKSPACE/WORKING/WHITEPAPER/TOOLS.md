@@ -1,6 +1,6 @@
 # WH-TOOLS — Werkzeuge, Skills & Körper-Interface
 
-> **MantisClaw Whitepaper** | Version 0.2.0 | 2026-04-10
+> **MantisClaw Whitepaper** | Version 0.3.0 | 2026-04-15
 > Status: **PARTIALLY IMPLEMENTED**
 
 ---
@@ -49,7 +49,7 @@ core/ (bisher)
 
 Die Module `context.py`, `session.py`, `workpaper.py`, `ltm.py` werden zu **workspace-Tools** in der Tool-Registry. Der Core bleibt reiner Loop.
 
-> **Implementierungsstand (2026-04-10):** Registry + 9 Tools implementiert. Body-Access-Module (`session.py`, `workpaper.py`, `ltm.py`, `context.py`) existieren noch als Core-Module — Migration zu Registry-Tools ausstehend.
+> **Implementierungsstand (2026-04-15):** Registry + 13 Tools implementiert (filesystem 5, memory 2, analysis 2, llm_management 2, loop_monitor 2). Body-Access-Module (`session.py`, `workpaper.py`, `ltm.py`, `context.py`) existieren noch als Core-Module — Migration zu Registry-Tools ausstehend.
 
 **Aktuelle Struktur (implementiert):**
 ```
@@ -70,7 +70,9 @@ core/ (aktuell)
     └── tools/
         ├── filesystem.py  ← read_file, write_file, append_file, list_dir, workspace_status
         ├── memory.py      ← query_memory, log_diary
-        └── analysis.py    ← analyze, summarize (LLM-powered)
+        ├── analysis.py    ← analyze, summarize (LLM-powered)
+        ├── llm_management.py ← list_models, switch_model
+        └── loop_monitor.py   ← loop_monitor, token_budget
 ```
 
 **Ziel-Struktur (Design):**
@@ -638,3 +640,4 @@ Wie weit wird WH-CORE angepasst?
 | 0.1.0-WIP | 2026-04-09 | Initiale Version: Registry, Skills, Körper-Interface |
 | 0.2.0 | 2026-04-10 | Implementation-Status: 8 Tools, Registry API, Security-Levels (int), Fuzzy-Matching. Design vs. Realität synchronisiert. |
 | 0.2.1 | 2026-04-10 | 9 Tools (workspace_status hinzu). log_diary gehärtet: Dedup + Rate-Limit (3/Tag) + 120-Zeichen-Limit. analyze/summarize Level 2→1 korrigiert. |
+| 0.3.0 | 2026-04-15 | 13 Tools: +llm_management (list_models, switch_model), +loop_monitor (loop_monitor, token_budget). Struktur-Dokumentation aktualisiert. |

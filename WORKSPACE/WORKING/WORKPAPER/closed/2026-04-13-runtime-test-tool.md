@@ -1,9 +1,10 @@
 # Workpaper — Runtime Test Tool (loop_monitor)
 
 **Erstellt:** 2026-04-13
-**Status:** OPEN
+**Status:** CLOSED
 **Agent:** copilot
 **Project:** mantisclaw-core
+**Closed:** 2026-04-15
 
 ---
 
@@ -83,8 +84,16 @@ Dieses Tool wird das erste Tool das im Projekt registriert und sichtbar ist.
 
 ## Next Steps
 
-- [ ] Python-Tool `loop_monitor.py` in `core/registry/tools/` implementieren
-- [ ] Skill-YAML `loop_monitor.md` in `WORKSPACE/WORKING/TOOLS/skills/` anlegen
-- [ ] Tool in Registry registrieren
-- [ ] Dashboard: Tool unter Projekt-Tools anzeigen
-- [ ] Erster Testlauf: Runtime 5 Ticks → Monitor auswerten
+- [x] Python-Tool `loop_monitor.py` in `core/registry/tools/` implementieren
+- [x] Skill-YAML `loop_monitor.md` in `WORKSPACE/WORKING/TOOLS/skills/` anlegen
+- [x] Tool in Registry registrieren (13 Tools total, inkl. loop_monitor + token_budget)
+- [x] Erster Testlauf: token_budget → OK, loop_monitor → OK (Dashboard offline korrekt erkannt)
+- [ ] Dashboard: Tool unter Projekt-Tools anzeigen (deferred — Dashboard-Integration separat)
+
+## Fazit
+
+`loop_monitor` und `token_budget` sind implementiert, registriert und getestet. Beide Tools funktionieren korrekt:
+- `token_budget` gibt die Budget-Übersicht aus
+- `loop_monitor` prüft Runtime, Ticks, Prompts und LM Studio, erkennt Anomalien und speichert Reports in LOGS/
+- WH-TOOLS und WH-CORE auf 13 Tools aktualisiert
+- Token-Budget Guideline in GUIDELINES/ dokumentiert

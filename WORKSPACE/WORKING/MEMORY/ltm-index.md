@@ -208,43 +208,8 @@ _Workpaper auto-ingested at session close._
 ### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
 
 **Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
-**Ingested at:** 2026-04-10T06:00:45.305490
-
-_Workpaper auto-ingested at session close._
-
----
-
-### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
-
-**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
-**Ingested at:** 2026-04-10T06:38:18.344240
-
-_Workpaper auto-ingested at session close._
-
----
-
-### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
-
-**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
-**Ingested at:** 2026-04-10T06:57:15.385989
-
-_Workpaper auto-ingested at session close._
-
----
-
-### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
-
-**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
-**Ingested at:** 2026-04-10T07:01:51.220877
-
-_Workpaper auto-ingested at session close._
-
----
-
-### 2026-04-10 | 2026-04-10-mantisclaw-runtime-loop (AUTO-INGEST)
-
-**Source:** `WORKPAPER/closed/2026-04-10-mantisclaw-runtime-loop.md`
 **Ingested at:** 2026-04-10T21:02:49.696281
+**Note:** 1252 Ticks (tick-987 bis tick-1638), alle erfolgreich. Loop-Stabilität bewiesen. Plan-Beschreibungen fehlten (Bug). Tick-IDs nicht-sequentiell.
 
 _Workpaper auto-ingested at session close._
 
