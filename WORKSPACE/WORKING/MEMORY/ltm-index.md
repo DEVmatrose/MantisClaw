@@ -265,3 +265,59 @@ _Workpaper auto-ingested at session close._
 - README v0.4.0: dashboard/ Baum, Layer-Model-Korrektur, Voice-Sektion
 
 ---
+
+### 2026-04-16 | 2026-04-16-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-16-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-16T07:01:11.831382
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-16 | BUG: Dashboard Import Error — faster_whisper
+
+**Source:** `WORKPAPER/2026-04-16-BUG-dashboard-import-error.md`
+**Status:** RESOLVED
+
+**Problem:** Dashboard crashte beim Start mit `ModuleNotFoundError: No module named 'faster_whisper'`.  
+Import-Chain: `app.py` → `dashboard/voice.py:15` → `from faster_whisper import WhisperModel`.
+
+**Ursache:** In der Voice-Session (15.04.) wurden `faster-whisper` und `edge-tts` implementiert und getestet, aber nie in `requirements.txt` aufgenommen. Gestern lief alles über globales Python (pyenv), wo die Packages installiert waren. Heute im `.venv` fehlten sie.
+
+**Abgrenzung:** `core/voice.py` nutzt nur `edge_tts` (TTS) — daher lief `python -m core.runtime` immer fehlerfrei. Nur das Dashboard (STT via `faster-whisper`) war betroffen.
+
+**Fix:**  
+- `requirements.txt` ergänzt: `edge-tts>=6.1`, `faster-whisper>=1.0`
+- `faster-whisper` + 15 Abhängigkeiten ins `.venv` installiert
+
+**Lektion:** Bei Feature-Abschluss IMMER `requirements.txt` im File-Protocol prüfen. Testen auf globalem Python ≠ Testen im venv.
+
+---
+
+### 2026-04-16 | 2026-04-16-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-16-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-16T07:03:30.174397
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-16 | 2026-04-16-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-16-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-16T07:10:06.222898
+
+_Workpaper auto-ingested at session close._
+
+---
+
+### 2026-04-16 | 2026-04-16-mantisclaw-runtime-loop (AUTO-INGEST)
+
+**Source:** `WORKPAPER/closed/2026-04-16-mantisclaw-runtime-loop.md`
+**Ingested at:** 2026-04-16T10:01:42.578759
+
+_Workpaper auto-ingested at session close._
+
+---

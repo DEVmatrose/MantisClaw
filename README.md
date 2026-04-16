@@ -240,31 +240,40 @@ uvicorn dashboard.app:app --reload --port 8080
 Open **http://localhost:8080** — the dashboard displays:
 
 ```
-┌─────────────┬──────────────────────────────────┬───────────────┐
-│ L1 Core     │                                  │ R1 Chat-Hist. │
-│ L2 Identity │        Chat with the Agent       │ R2 Project    │
-│ L3 Runtime  │        (SSE-Streaming)           │ R3 Workpapers │
-│ L4 Tools    │                                  │ R4 Workspace  │
-│ L5 Voice    │                                  │               │
-└─────────────┴──────────────────────────────────┴───────────────┘
+┌──────────────┬──────────────────────────────────┬───────────────┐
+│  ASSISTANT   │                                  │ R1 Project    │
+│  MantisClaw  │        Chat with the Agent       │ R2 Workpaper  │
+│  Voice-Chat  │        (SSE-Streaming)           │ R3 WORKING    │
+│  Event-Feed  │                                  │ R4 Chat-Hist. │
+├──────────────┴──────────────────────────────────┴───────────────┤
+│ 🟢 [Backend ▼] [Model ▼] │ Identity │ Runtime │ Tools │ Voice  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-  - **Left (Agent):** L1 Core (Backend/Model-Switcher), L2 Identity (soul(t) + Inspector), L3 Runtime (Health + Live Tick Feed + Prompt Inspector), L4 Tools (Registry), L5 Voice Assistant (VAD + TTS/STT + Action Classifier)
+  - **Left (Assistant):** Mantis Voice-Assistent — Voice-Chat-Log (VAD + TTS/STT + Action Classifier), Event-Feed (runtime ticks, errors, warnings)
   - **Center:** Chat interface with SSE streaming (token-by-token)
-  - **Right (AAMS):** R1 Chat history, R2 Project + Milestones, R3 Workpapers (with closed-toggle), R4 Workspace tree + WP preview
-  - **Model-Switcher:** Live switching between LM Studio / Ollama models
-  - **Identity Inspector:** Shows all 6 identity files (base, agenda, account, social, decentral, hook) in tabs
-  - **Prompt Inspector:** Latest LLM prompts (System/User/Response) for analysis
+  - **Right (Project):** R1 Project Overview (milestones, status, tags), R2 Active Workpaper (preview), R3 WORKING-Tree (navigable AAMS structure), R4 Chat history
+  - **Footer Controls:** Backend/Model Switcher, Identity Inspector, Runtime Modal, Tools Modal, Prompt Inspector, Voice Toggle
+  - **Header:** Project selector dropdown (switches active project context)
 
 -----
 
-## Voice Assistant (L5)
+## Voice Assistant — The Main Agent
 
-The dashboard includes a **voice-first assistant** in the L5 sidebar box. Speech is captured via browser-based VAD (Voice Activity Detection) and processed through a 2-stage pipeline:
+Mantis is not just a UI element — **Mantis is the main agent**. The dashboard is its face, voice its mouth, the runtime loop its brain. Voice-first is the primary interaction mode.
+
+The assistant lives in the left sidebar and processes speech through a multi-stage pipeline:
 
 ```
 Mic → VAD → STT (faster-whisper) → Intent Classifier → Handler → LLM → TTS (edge-tts) → Speaker
 ```
+
+### Focus Hierarchy
+
+The assistant never loses focus:
+1. **Workpaper** — Active task, next steps
+2. **Project** — Milestones, scope, status
+3. **Self** — Health, runtime, tools
 
 ### Intent Classification
 
@@ -307,7 +316,7 @@ The assistant identity is persisted in `data/voice_config.json`:
 | Identity | ✅ All files local in `identity/` |
 | LLM Backend | ✅ LM Studio (default) / Ollama / Cloud optional |
 | Dashboard | ✅ Web-UI on localhost:8080 (FastAPI + SSE + Live Tick Feed) |
-| Voice Assistant | ✅ L5 Voice (TTS/STT, VAD, Intent Classification) |
+| Voice Assistant | ✅ Voice-first Main Agent (TTS/STT, VAD, Intent Classification, Event Narration) |
 | Idle Detection | ✅ Identical plans skipped after 3 repetitions |
 | Prompt Logging | ✅ JSONL-based, inspectable via Dashboard |
 | Deployment | ✅ Single repo, runs standalone |

@@ -147,10 +147,11 @@ L1  Identity               → identity/ (soul(t) Berechnung)
 L2  AAMS Body (Körper)     → WORKING/ (passiv, nur über Tools)
 L3  Runtime / Loop         → core/ (planner, executor, observer, reflect)
 L4  Tool-Registry           → core/registry/ (Whitelist, inkl. Körper-Zugriff)
-L5  Security               → Querschnitt (Security-Levels pro Tool)
+L5  Skills + Voice          → TOOLS/skills/ + voice.py (Voice-first Assistent)
+L6  Security               → Querschnitt (Security-Levels pro Tool)
 ```
 
-> In **Mantis-OS** kommen zusätzlich L6 (Network/MantisNostr) und Skills (WORKING/TOOLS/skills/) hinzu.
+> In **Mantis-OS** kommen zusätzlich L7 (Network/MantisNostr) hinzu.
 
 > **Kernregel:** L3 (Loop) berührt L2 (Körper) nie direkt. Jeder Zugriff auf WORKING/ läuft über ein registriertes Tool in L4.
 
@@ -223,20 +224,21 @@ uvicorn dashboard.app:app --reload --port 8080
 Öffne **http://localhost:8080** — das Dashboard zeigt:
 
 ```
-┌─────────────┬──────────────────────────────────┬───────────────┐
-│ L1 Core     │                                  │ R1 Chat-Hist. │
-│ L2 Identity │        Chat mit dem Agent         │ R2 Project    │
-│ L3 Runtime  │        (SSE-Streaming)            │ R3 Workpapers │
-│ L4 Tools    │                                  │ R4 Workspace  │
-└─────────────┴──────────────────────────────────┴───────────────┘
+┌──────────────┬──────────────────────────────────┬───────────────┐
+│  ASSISTENT   │                                  │ R1 Projekt    │
+│  MantisClaw  │        Chat mit dem Agent         │ R2 Workpaper  │
+│  Voice-Chat  │        (SSE-Streaming)            │ R3 WORKING    │
+│  Event-Feed  │                                  │ R4 Chat-Hist. │
+├──────────────┴──────────────────────────────────┴───────────────┤
+│ 🟢 [Backend ▼] [Model ▼] │ Identity │ Runtime │ Tools │ Voice  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Links (Agent):** L1 Core (Backend/Model-Switcher), L2 Identity (soul(t) + Inspector), L3 Runtime (Health + Live Tick Feed + Prompt Inspector), L4 Tools (Registry)
+- **Links (Assistent):** Mantis Voice-Assistent — Voice-Chat-Log (VAD + TTS/STT + Action Classifier), Event-Feed (Runtime-Ticks, Fehler, Warnungen)
 - **Mitte:** Chat-Interface mit SSE-Streaming (Token-by-Token)
-- **Rechts (AAMS):** R1 Chat-History, R2 Projekt + Milestones, R3 Workpapers (mit Closed-Toggle), R4 Workspace-Baum + WP-Preview
-- **Model-Switcher:** Wechselt live zwischen LM Studio / Ollama Modellen
-- **Identity Inspector:** Zeigt alle 6 Identity-Dateien (base, agenda, account, social, decentral, hook) in Tabs
-- **Prompt Inspector:** Letzte LLM-Prompts (System/User/Response) zur Analyse
+- **Rechts (Projekt-Kontext):** R1 Projekt-Übersicht (Milestones, Status, Tags), R2 Aktives Workpaper (Preview), R3 WORKING-Baum (navigierbare AAMS-Struktur), R4 Chat-History
+- **Footer Controls:** Backend/Model-Switcher, Identity Inspector, Runtime Modal, Tools Modal, Prompt Inspector, Voice Toggle
+- **Header:** Projekt-Selektor Dropdown (wechselt aktiven Projekt-Kontext)
 
 ---
 

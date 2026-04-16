@@ -7,10 +7,12 @@ Aufruf: python -m core.runtime
 """
 
 import asyncio
+import json
 import logging
 import os
 import signal
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -167,6 +169,9 @@ class MantisClaw:
         self._repeat_count: int = 0
         self._tick_summaries: list[str] = []  # Last N tick summaries for planner
 
+        # Bridge file for dashboard communication
+        self._bridge_path = self.project_root / "data" / "runtime_state.json"
+
     def _load_config(self, config_path: Path | None) -> dict:
         if config_path is None:
             config_path = self.project_root / "config" / "default.yaml"
@@ -231,9 +236,62 @@ class MantisClaw:
             logger.error(f"Failed to load active project: {e}")
             return None
 
+    def _write_bridge_state(self, ticks_data: list | None = None):
+        """Write runtime state to bridge file for dashboard consumption."""
+        try:
+            tools = [{"name": t.name, "description": t.description, "level": t.security_level}
+                     for t in self.registry.list_available()]
+
+            tick_history = []
+            for m in self.observer.history[-20:]:
+                tick_history.append({
+                    "tick": m.tick_number, "ts": m.timestamp,
+                    "goal": m.plan_goal, "steps": m.steps_total,
+                    "ok": m.steps_succeeded, "fail": m.steps_failed,
+                    "anomalies": m.anomalies[:3],
+                })
+            tick_history.reverse()
+
+            state = {
+                "running": self.running,
+                "tick_count": self.tick_count,
+                "health": self.observer.health,
+                "heartbeat": self.heartbeat_interval,
+                "voice_enabled": self.voice.enabled,
+                "session": {
+                    "workpaper": str(self.session.workpaper_path) if self.session.workpaper_path else None,
+                    "agent": self.session.agent_name,
+                },
+                "tools": tools,
+                "ticks": tick_history,
+                "tick_summaries": self._tick_summaries[-5:],
+                "idle_repeats": self._repeat_count,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            self._bridge_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self._bridge_path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp.replace(self._bridge_path)
+        except Exception as e:
+            logger.debug(f"Bridge write failed: {e}")
+
+    def _read_bridge_voice_toggle(self):
+        """Read voice_enabled flag from bridge file (dashboard may have changed it)."""
+        try:
+            if self._bridge_path.exists():
+                data = json.loads(self._bridge_path.read_text(encoding="utf-8"))
+                if "voice_enabled" in data:
+                    self.voice.enabled = data["voice_enabled"]
+        except Exception:
+            pass
+
     async def tick(self):
         self.tick_count += 1
         logger.info(f"=== TICK {self.tick_count} ===")
+
+        # 0. Read dashboard voice toggle
+        self._read_bridge_voice_toggle()
 
         # 1. Identity → soul(t)
         soul = self.identity.compute_soul()
@@ -347,6 +405,9 @@ class MantisClaw:
             if metrics.anomalies:
                 voice_summary += f" {len(metrics.anomalies)} Anomalien."
             await self.voice.speak(voice_summary)
+
+            # 11. Write bridge state for dashboard
+            self._write_bridge_state()
         else:
             logger.info("No steps to execute this tick.")
 
@@ -363,6 +424,9 @@ class MantisClaw:
 
         # Voice startup announcement
         await self._startup_announcement()
+
+        # Write initial bridge state
+        self._write_bridge_state()
 
         try:
             while self.running:
@@ -431,6 +495,8 @@ class MantisClaw:
 
     def _shutdown(self):
         logger.info(f"Shutting down. Total ticks: {self.tick_count}. Health: {self.observer.health}")
+        self.running = False
+        self._write_bridge_state()  # Final state: running=False
         if self.session.workpaper_path:
             self.session.close(
                 decisions=[f"Runtime stopped after {self.tick_count} ticks"],

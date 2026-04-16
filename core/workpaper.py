@@ -54,6 +54,9 @@ class WorkpaperManager:
             f.write(line)
 
     def close(self, wp_path: Path, decisions: list[str], next_steps: list[str]):
+        if not wp_path.exists():
+            logger.warning(f"Workpaper not found for close: {wp_path.name}")
+            return
         content = wp_path.read_text(encoding="utf-8")
         content = content.replace("**Status:** OPEN", f"**Status:** CLOSED\n**Geschlossen:** {datetime.now().strftime('%Y-%m-%d')}")
 
@@ -71,7 +74,10 @@ class WorkpaperManager:
         wp_path.write_text(content, encoding="utf-8")
         logger.info(f"Workpaper closed: {wp_path.name}")
 
-    def archive(self, wp_path: Path) -> Path:
+    def archive(self, wp_path: Path) -> Path | None:
+        if not wp_path.exists():
+            logger.warning(f"Workpaper not found for archive: {wp_path.name}")
+            return None
         dest = self.closed_dir / wp_path.name
         if dest.exists():
             # Append counter to avoid collision

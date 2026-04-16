@@ -256,8 +256,7 @@ async def index(request: Request):
     connection = await asyncio.to_thread(_check_connection)
     active_project = _get_active_project()
 
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", context={
         "conversations": conversations,
         "identity": identity,
         "workpapers": workpapers,
@@ -285,8 +284,7 @@ async def chat_page(request: Request, conv_id: str):
     connection = await asyncio.to_thread(_check_connection)
     active_project = _get_active_project()
 
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", context={
         "conversations": conversations,
         "identity": identity,
         "workpapers": workpapers,
@@ -331,8 +329,7 @@ async def generating_page(request: Request, conv_id: str):
     workspace = _get_workspace_tree()
     connection = await asyncio.to_thread(_check_connection)
 
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", context={
         "conversations": conversations,
         "identity": identity,
         "workpapers": workpapers,
@@ -457,10 +454,25 @@ async def remove_conversation(conv_id: str):
     return {"ok": True}
 
 
+# --- Runtime Bridge ---
+BRIDGE_PATH = PROJECT_ROOT / "data" / "runtime_state.json"
+
+
+def _read_bridge() -> dict | None:
+    """Read runtime state from bridge file. Returns None if unavailable or stale."""
+    try:
+        if not BRIDGE_PATH.exists():
+            return None
+        data = json.loads(BRIDGE_PATH.read_text(encoding="utf-8"))
+        return data
+    except Exception:
+        return None
+
+
 # --- Runtime API ---
 @app.get("/api/runtime")
 async def runtime_status():
-    """Get runtime state: tick count, health, registered tools, active session."""
+    """Get runtime state from bridge file or in-process instance."""
     # Load project tools (available even without runtime)
     project = _get_active_project()
     project_tools = []
@@ -474,51 +486,103 @@ async def runtime_status():
                 "skill": pt.get("skill", ""),
             })
             project_tool_names.add(pt.get("name", ""))
-    if not _runtime_instance:
-        return {"running": False, "message": "Runtime not connected",
-                "project_tools": project_tools,
-                "project_name": project.get("name") if project else None}
-    rt = _runtime_instance
-    return {
-        "running": rt.running,
-        "tick_count": rt.tick_count,
-        "health": rt.observer.health,
-        "heartbeat": rt.heartbeat_interval,
-        "tools": [{"name": t.name, "description": t.description, "level": t.security_level,
-                    "project": t.name in project_tool_names}
-                  for t in rt.registry.list_available()],
-        "project_tools": project_tools,
-        "project_name": project.get("name") if project else None,
-        "session": {
-            "workpaper": str(rt.session.workpaper_path) if rt.session.workpaper_path else None,
-            "agent": rt.session.agent_name,
-        },
-    }
+
+    # Try in-process instance first, then bridge file
+    if _runtime_instance:
+        rt = _runtime_instance
+        return {
+            "running": rt.running,
+            "tick_count": rt.tick_count,
+            "health": rt.observer.health,
+            "heartbeat": rt.heartbeat_interval,
+            "voice_enabled": rt.voice.enabled,
+            "tools": [{"name": t.name, "description": t.description, "level": t.security_level,
+                        "project": t.name in project_tool_names}
+                      for t in rt.registry.list_available()],
+            "project_tools": project_tools,
+            "project_name": project.get("name") if project else None,
+            "session": {
+                "workpaper": str(rt.session.workpaper_path) if rt.session.workpaper_path else None,
+                "agent": rt.session.agent_name,
+            },
+        }
+
+    # Bridge file fallback (separate process runtime)
+    bridge = _read_bridge()
+    if bridge and bridge.get("running"):
+        # Mark project tools
+        for t in bridge.get("tools", []):
+            t["project"] = t.get("name", "") in project_tool_names
+        bridge["project_tools"] = project_tools
+        bridge["project_name"] = project.get("name") if project else None
+        return bridge
+
+    return {"running": False, "message": "Runtime not connected",
+            "project_tools": project_tools,
+            "project_name": project.get("name") if project else None}
 
 
 @app.get("/api/runtime/ticks")
 async def runtime_ticks(limit: int = 10):
-    """Get recent tick history from observer."""
-    if not _runtime_instance:
-        return {"ticks": [], "idle_repeats": 0}
-    rt = _runtime_instance
-    ticks = []
-    for m in rt.observer.history[-limit:]:
-        ticks.append({
-            "tick": m.tick_number,
-            "ts": m.timestamp,
-            "goal": m.plan_goal,
-            "steps": m.steps_total,
-            "ok": m.steps_succeeded,
-            "fail": m.steps_failed,
-            "anomalies": m.anomalies[:3],
-        })
-    ticks.reverse()
-    return {
-        "ticks": ticks,
-        "idle_repeats": getattr(rt, '_repeat_count', 0),
-        "tick_summaries": getattr(rt, '_tick_summaries', [])[-5:],
-    }
+    """Get recent tick history from observer or bridge file."""
+    if _runtime_instance:
+        rt = _runtime_instance
+        ticks = []
+        for m in rt.observer.history[-limit:]:
+            ticks.append({
+                "tick": m.tick_number,
+                "ts": m.timestamp,
+                "goal": m.plan_goal,
+                "steps": m.steps_total,
+                "ok": m.steps_succeeded,
+                "fail": m.steps_failed,
+                "anomalies": m.anomalies[:3],
+            })
+        ticks.reverse()
+        return {
+            "ticks": ticks,
+            "idle_repeats": getattr(rt, '_repeat_count', 0),
+            "tick_summaries": getattr(rt, '_tick_summaries', [])[-5:],
+        }
+
+    # Bridge file fallback
+    bridge = _read_bridge()
+    if bridge:
+        ticks = bridge.get("ticks", [])[:limit]
+        return {
+            "ticks": ticks,
+            "idle_repeats": bridge.get("idle_repeats", 0),
+            "tick_summaries": bridge.get("tick_summaries", []),
+        }
+
+    return {"ticks": [], "idle_repeats": 0}
+
+
+@app.post("/api/runtime/voice")
+async def toggle_runtime_voice(request: Request):
+    """Toggle voice on/off for runtime via bridge file."""
+    body = await request.json()
+    enabled = body.get("enabled", True)
+
+    # In-process: direct toggle
+    if _runtime_instance:
+        _runtime_instance.voice.enabled = enabled
+        return {"voice_enabled": enabled}
+
+    # Bridge: read-modify-write
+    bridge = _read_bridge()
+    if bridge:
+        bridge["voice_enabled"] = enabled
+        try:
+            BRIDGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            tmp = BRIDGE_PATH.with_suffix(".tmp")
+            tmp.write_text(json.dumps(bridge, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp.replace(BRIDGE_PATH)
+            return {"voice_enabled": enabled}
+        except Exception as e:
+            return {"error": str(e)}
+
+    return {"error": "Runtime not connected"}
 
 
 @app.get("/api/workpapers")
@@ -584,7 +648,148 @@ async def get_identity_files():
     }
 
 
-@app.get("/api/logs/prompts")
+# --- Project API ---
+def _list_projects() -> list[dict]:
+    """List all projects from WORKING/PROJECT/*/project.yaml."""
+    import yaml as _yaml
+    project_dir = PROJECT_ROOT / "WORKSPACE" / "WORKING" / "PROJECT"
+    projects = []
+    if not project_dir.exists():
+        return projects
+    for d in sorted(project_dir.iterdir()):
+        if not d.is_dir() or d.name.startswith("_"):
+            continue
+        manifest = d / "project.yaml"
+        if not manifest.exists():
+            continue
+        try:
+            with open(manifest, encoding="utf-8") as f:
+                data = _yaml.safe_load(f) or {}
+            projects.append({
+                "slug": d.name,
+                "name": data.get("name", d.name),
+                "status": data.get("status", "unknown"),
+            })
+        except Exception:
+            projects.append({"slug": d.name, "name": d.name, "status": "error"})
+    return projects
+
+
+def _get_active_project_slug() -> str | None:
+    """Get the slug of the active project from _active.yaml."""
+    import yaml as _yaml
+    active_path = PROJECT_ROOT / "WORKSPACE" / "WORKING" / "PROJECT" / "_active.yaml"
+    if not active_path.exists():
+        return None
+    try:
+        with open(active_path, encoding="utf-8") as f:
+            data = _yaml.safe_load(f) or {}
+        return data.get("active_project")
+    except Exception:
+        return None
+
+
+def _set_active_project(slug: str) -> bool:
+    """Set the active project in _active.yaml."""
+    import yaml as _yaml
+    project_dir = PROJECT_ROOT / "WORKSPACE" / "WORKING" / "PROJECT"
+    active_path = project_dir / "_active.yaml"
+    # Verify project exists
+    if not (project_dir / slug / "project.yaml").exists():
+        return False
+    try:
+        from datetime import datetime, timezone
+        data = {
+            "active_project": slug,
+            "since": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        }
+        active_path.write_text(
+            _yaml.dump(data, default_flow_style=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return True
+    except Exception:
+        return False
+
+
+@app.get("/api/projects")
+async def api_list_projects():
+    """List all projects with active marker."""
+    projects = _list_projects()
+    active_slug = _get_active_project_slug()
+    for p in projects:
+        p["active"] = p["slug"] == active_slug
+    return {"projects": projects, "active": active_slug}
+
+
+@app.get("/api/projects/active")
+async def api_get_active_project():
+    """Get full active project data."""
+    project = _get_active_project()
+    if not project:
+        return {"error": "No active project"}
+    return project
+
+
+@app.post("/api/projects/active")
+async def api_set_active_project(request: Request):
+    """Switch the active project."""
+    data = await request.json()
+    slug = data.get("slug", "").strip()
+    if not slug:
+        return {"error": "slug required"}
+    if _set_active_project(slug):
+        project = _get_active_project()
+        return {"ok": True, "project": project}
+    return {"error": f"Project '{slug}' not found"}
+
+
+@app.get("/api/projects/{slug}/tree")
+async def api_project_tree(slug: str):
+    """Return WORKING folder tree. Currently global WORKING (project-scoped migration planned)."""
+    # Validate slug
+    if ".." in slug or "/" in slug or "\\" in slug:
+        return {"error": "Invalid slug"}
+    working = PROJECT_ROOT / "WORKSPACE" / "WORKING"
+    if not working.exists():
+        return {"folders": []}
+    folders = []
+    # Show AAMS folders with file listing
+    for d in sorted(working.iterdir()):
+        if not d.is_dir() or d.name.startswith("_") or d.name == "PROJECT":
+            continue
+        files = []
+        for f in sorted(d.rglob("*")):
+            if f.is_file() and f.name != ".gitkeep":
+                rel = f.relative_to(d)
+                files.append({"name": str(rel), "size": f.stat().st_size})
+        folders.append({
+            "name": d.name,
+            "count": len(files),
+            "files": files[:50],  # limit per folder
+        })
+    return {"slug": slug, "folders": folders}
+
+
+@app.get("/api/projects/{slug}/file")
+async def api_project_file(slug: str, path: str = ""):
+    """Read a file from WORKING by relative path. Path-traversal protected."""
+    if ".." in path or ".." in slug:
+        return {"error": "Invalid path"}
+    working = PROJECT_ROOT / "WORKSPACE" / "WORKING"
+    target = (working / path).resolve()
+    # Ensure target is under WORKING
+    if not str(target).startswith(str(working.resolve())):
+        return {"error": "Access denied"}
+    if not target.exists() or not target.is_file():
+        return {"error": "File not found"}
+    try:
+        content = target.read_text(encoding="utf-8")
+        return {"name": target.name, "path": path, "content": content}
+    except Exception:
+        return {"error": "Cannot read file"}
+
+
 async def get_prompt_log(limit: int = 20):
     """Return the last N prompt entries from LOGS/prompt_log.jsonl."""
     log_path = PROJECT_ROOT / "WORKSPACE" / "WORKING" / "LOGS" / "prompt_log.jsonl"
