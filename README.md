@@ -1,4 +1,4 @@
-# MantisClaw — Autonomous Agent Loop Framework
+# WIP - MantisClaw — Autonomous Agent Loop Framework
 
 > **Language:** English | [Deutsch](README-DE.md) | [中文](README-CH.md)
 
