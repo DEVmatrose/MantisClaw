@@ -438,6 +438,7 @@ async def api_loaded_models():
 
 
 @app.get("/api/health")
+@app.get("/health")
 async def health():
     connection = await asyncio.to_thread(_check_connection)
     return {
@@ -788,6 +789,11 @@ async def api_project_file(slug: str, path: str = ""):
         return {"name": target.name, "path": path, "content": content}
     except Exception:
         return {"error": "Cannot read file"}
+
+
+@app.get("/api/logs/prompts")
+async def api_prompt_log(limit: int = 20):
+    return await get_prompt_log(limit)
 
 
 async def get_prompt_log(limit: int = 20):
