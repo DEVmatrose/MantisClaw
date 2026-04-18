@@ -321,3 +321,41 @@ _Workpaper auto-ingested at session close._
 _Workpaper auto-ingested at session close._
 
 ---
+
+### 2026-04-18 | UI Design-Entscheidung: Option C Hybrid
+
+**Source:** `WORKPAPER/2026-04-18-DASH-VSCO-ui-design-decision.md` + 2 weitere WPs
+**Agents:** ogerly (Mensch) + GitHub Copilot (Agent)
+**Status:** OPEN (Design beschlossen, Implementierung ausstehend)
+
+**Kernentscheidung: Option C — Hybrid UI**
+- **VSCodium** = primäre Arbeitsumgebung (Code, Files, Terminal, Git, Chat via Continue.dev)
+- **Dashboard** = Companion für Voice, Runtime, Identity (was VS Code nicht kann)
+- Dashboard verliert R2 (Workpaper-Preview) + R3 (File-Tree) → VS Code macht das besser
+- Dashboard behält: Voice-Assistent, Runtime-Monitor, Identity Inspector, Event-Feed, Model-Switcher
+
+**Zwei Betriebsmodi für MantisClaw:**
+- **Loop-Modus** (autonom): Heartbeat 60s, Plan → Execute → Observe → Reflect → Idle
+- **Chat-Modus** (reaktiv): HTTP Request → soul(t) → LLM → Response (für Continue.dev)
+
+**Technische Entscheidungen:**
+- `/v1/chat/completions` Endpoint (OpenAI-kompatibel) als Blocker für Continue.dev
+- `asyncio.Lock` in llm.py gegen LLM-Kollision zwischen Loop und Chat
+- Continue.dev Config: Custom Provider → http://localhost:8080
+- VSCodium bevorzugt (kein Telemetrie, Open VSX, Continue.dev verfügbar)
+
+**Drei Workpapers erstellt:**
+1. WP-DASH-VSCO-001: UI Design-Entscheidung (Optionen A/B/C verglichen)
+2. WP-DASH-VSCO-002: Dashboard-Evolution (was geht, was bleibt, Grid-Umbau)
+3. WP-DASH-VSCO-003: VSCodium + Continue.dev Integration (Setup, Config, LLM-Lock)
+
+**Nächste Schritte (priorisiert):**
+1. `/v1/chat/completions` Endpoint implementieren
+2. `asyncio.Lock` in llm.py
+3. Continue.dev installieren + testen
+4. Dashboard R2/R3 entfernen
+5. WH-DASHBOARD v2.0, WH-ASSISTANT v2.0
+
+**Größtes Risiko:** LLM-Lock — Loop-Tick + Chat-Request gleichzeitig auf derselben LM Studio Instanz.
+
+---

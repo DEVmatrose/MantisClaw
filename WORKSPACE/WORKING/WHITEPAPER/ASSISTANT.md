@@ -110,7 +110,7 @@ Der Assistent folgt einer strikten Fokus-Hierarchie:
 
 | Intent | Beschreibung | Beispiel |
 |--------|-------------|---------|
-| **IDENTITY** | Assistenten-Identität ändern | "Nenn dich Mantes" |
+| **IDENTITY** | Assistenten-Identität ändern | "Nenn dich Mantis" |
 | **SYSTEM** | Projekt/Runtime/State abfragen | "In welchem Projekt sind wir?" |
 | **CHAT** | Freie Konversation | "Was denkst du über den Ansatz?" |
 

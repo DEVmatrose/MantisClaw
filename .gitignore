@@ -53,3 +53,9 @@ WORKSPACE/WORKING/MEMORY/chroma/
 # OS
 .DS_Store
 Thumbs.db
+
+# Build artifacts
+.vite/
+
+# Binary data
+data/chats.db

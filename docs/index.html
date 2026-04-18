@@ -361,40 +361,45 @@
 <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
 <section class="reveal">
   <div class="section-label">// Web Dashboard</div>
-  <h2 data-i="en">localhost:8080 — Real-time Agent Insight.</h2>
-  <h2 data-i="de">localhost:8080 — Echtzeit-Einblick in den Agenten.</h2>
-  <h2 data-i="cn">localhost:8080 — 实时代理洞察。</h2>
+  <h2 data-i="en">Hybrid UI — VSCodium + Dashboard Companion.</h2>
+  <h2 data-i="de">Hybrid UI — VSCodium + Dashboard Companion.</h2>
+  <h2 data-i="cn">混合UI — VSCodium + 仪表盘伴侣。</h2>
   <div class="dash-wrap">
     <div class="dash-panel">
-      <div class="dash-panel-title" data-i="en">Left — Voice Assistant</div>
-      <div class="dash-panel-title" data-i="de">Links — Voice-Assistent</div>
-      <div class="dash-panel-title" data-i="cn">左侧 — 语音助手</div>
-      <div class="dash-item">MantisClaw · Project Focus</div>
-      <div class="dash-item">Voice-Chat (VAD + TTS/STT)</div>
-      <div class="dash-item">Event-Feed (Ticks, Errors)</div>
+      <div class="dash-panel-title" data-i="en">VSCodium — Primary Workspace</div>
+      <div class="dash-panel-title" data-i="de">VSCodium — Primäre Arbeitsumgebung</div>
+      <div class="dash-panel-title" data-i="cn">VSCodium — 主要工作区</div>
+      <div class="dash-item">Files · Editor · Terminal · Git</div>
+      <div class="dash-item">Continue.dev → MantisClaw Chat</div>
+      <div class="dash-item">soul(t) in every response</div>
     </div>
     <div class="dash-panel" style="display:flex;flex-direction:column;gap:12px;">
-      <div class="dash-panel-title" data-i="en">Center — Chat (SSE Token Streaming)</div>
-      <div class="dash-panel-title" data-i="de">Mitte — Chat (SSE Token-Streaming)</div>
-      <div class="dash-panel-title" data-i="cn">中间 — 对话（SSE Token 流）</div>
+      <div class="dash-panel-title" data-i="en">Dashboard (:8080) — Companion</div>
+      <div class="dash-panel-title" data-i="de">Dashboard (:8080) — Companion</div>
+      <div class="dash-panel-title" data-i="cn">仪表盘 (:8080) — 伴侣</div>
       <div class="dash-chat">
-        <div class="dash-bubble">&gt; What is the current project status?</div>
-        <div class="dash-bubble agent">MantisClaw: Active project: MantisClaw Core. 9/11 milestones done. Current focus: Project-Scoped AAMS architecture.</div>
+        <div class="dash-bubble">&gt; Mantis, what's the runtime status?</div>
+        <div class="dash-bubble agent">MantisClaw: All green. Loop running stable, last tick 45 seconds ago. 13 tools registered.</div>
       </div>
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);">
-        <span data-i="en">Token-by-token via SSE · Model switcher: LM Studio ↔ Ollama live</span>
-        <span data-i="de">Token-by-Token via SSE · Model-Switcher: LM Studio ↔ Ollama live</span>
-        <span data-i="cn">逐Token通过SSE · 模型切换：LM Studio ↔ Ollama 实时</span>
+        <span data-i="en">Voice (TTS/STT) · Runtime Monitor · Identity Inspector · Model Switcher</span>
+        <span data-i="de">Voice (TTS/STT) · Runtime-Monitor · Identity Inspector · Model-Switcher</span>
+        <span data-i="cn">语音（TTS/STT）· 运行时监控 · 身份检查器 · 模型切换</span>
       </div>
     </div>
     <div class="dash-panel">
-      <div class="dash-panel-title" data-i="en">Right — Project Context</div>
-      <div class="dash-panel-title" data-i="de">Rechts — Projekt-Kontext</div>
-      <div class="dash-panel-title" data-i="cn">右侧 — 项目上下文</div>
-      <div class="dash-item">R1 · Project Overview</div>
-      <div class="dash-item">R2 · Active Workpaper</div>
-      <div class="dash-item">R3 · WORKING Tree</div>
-      <div class="dash-item">R4 · Chat History</div>
+      <div class="dash-panel-title" data-i="en">Two Operating Modes</div>
+      <div class="dash-panel-title" data-i="de">Zwei Betriebsmodi</div>
+      <div class="dash-panel-title" data-i="cn">两种运行模式</div>
+      <div class="dash-item" data-i="en">Loop Mode — autonomous, 60s heartbeat</div>
+      <div class="dash-item" data-i="de">Loop-Modus — autonom, 60s Heartbeat</div>
+      <div class="dash-item" data-i="cn">循环模式 — 自主，60秒心跳</div>
+      <div class="dash-item" data-i="en">Chat Mode — reactive, /v1/chat/completions</div>
+      <div class="dash-item" data-i="de">Chat-Modus — reaktiv, /v1/chat/completions</div>
+      <div class="dash-item" data-i="cn">对话模式 — 响应式，/v1/chat/completions</div>
+      <div class="dash-item" data-i="en">Async lock prevents LLM collisions</div>
+      <div class="dash-item" data-i="de">Async-Lock verhindert LLM-Kollisionen</div>
+      <div class="dash-item" data-i="cn">异步锁防止 LLM 冲突</div>
     </div>
   </div>
   <div style="margin-top:12px;">

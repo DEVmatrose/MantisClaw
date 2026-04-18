@@ -252,9 +252,61 @@ Open **http://localhost:8080** — the dashboard displays:
 
   - **Left (Assistant):** Mantis Voice-Assistent — Voice-Chat-Log (VAD + TTS/STT + Action Classifier), Event-Feed (runtime ticks, errors, warnings)
   - **Center:** Chat interface with SSE streaming (token-by-token)
-  - **Right (Project):** R1 Project Overview (milestones, status, tags), R2 Active Workpaper (preview), R3 WORKING-Tree (navigable AAMS structure), R4 Chat history
-  - **Footer Controls:** Backend/Model Switcher, Identity Inspector, Runtime Modal, Tools Modal, Prompt Inspector, Voice Toggle
+  - **Right:** R1 Runtime Monitor (live loop status), R2 Project Overview, R3 Token Budget
+  - **Footer Controls:** Backend/Model Switcher, Identity Inspector, Events, Prompt Inspector, Voice Toggle
   - **Header:** Project selector dropdown (switches active project context)
+
+### Hybrid Architecture (Option C)
+
+MantisClaw uses a **hybrid UI approach**:
+
+| Surface | Purpose |
+|---------|--------|
+| **VSCodium / VS Code** | Primary workspace — Code, Files, Terminal, Git, Chat (via Continue.dev) |
+| **Dashboard (:8080)** | Companion — Voice Assistant, Runtime Monitor, Identity Inspector |
+
+The dashboard provides what VS Code cannot: voice interaction (Web Audio API), live runtime monitoring, and identity inspection. Everything else (file editing, terminal, git, code chat) belongs in VS Code.
+
+**Continue.dev** connects to MantisClaw via an OpenAI-compatible `/v1/chat/completions` endpoint. Every response includes soul(t) context — the agent's personality flows into code assistance.
+
+### Hybrid Architecture (Option C)
+
+ManTwo Operating Modes
+
+MantisClaw supports two modes of operation:
+
+| Mode | Trigger | Behavior |
+|------|---------|----------|
+| **Loop Mode** (autonomous) | Heartbeat every 60s | Plan → Execute → Observe → Reflect → Idle |
+| **Chat Mode** (reactive) | HTTP Request (Continue.dev, Dashboard) | Request → soul(t) → LLM → Response |
+
+Both modes share the same LLM backend (serialized via async lock to prevent collisions).
+
+-----
+
+## tisClaw uses a **hybrid UI approach**:
+
+| Surface | Purpose |
+|---------|--------|
+| **VSCodium / VS Code** | Primary workspace — Code, Files, Terminal, Git, Chat (via Continue.dev) |
+| **Dashboard (:8080)** | Companion — Voice Assistant, Runtime Monitor, Identity Inspector |
+
+The dashboard provides what VS Code cannot: voice interaction (Web Audio API), live runtime monitoring, and identity inspection. Everything else (file editing, terminal, git, code chat) belongs in VS Code.
+
+**Continue.dev** connects to MantisClaw via an OpenAI-compatible `/v1/chat/completions` endpoint. Every response includes soul(t) context — the agent's personality flows into code assistance.
+
+-----
+
+## Two Operating Modes
+
+MantisClaw supports two modes of operation:
+
+| Mode | Trigger | Behavior |
+|------|---------|----------|
+| **Loop Mode** (autonomous) | Heartbeat every 60s | Plan → Execute → Observe → Reflect → Idle |
+| **Chat Mode** (reactive) | HTTP Request (Continue.dev, Dashboard) | Request → soul(t) → LLM → Response |
+
+Both modes share the same LLM backend (serialized via async lock to prevent collisions).
 
 -----
 
@@ -345,11 +397,13 @@ The autonomous loop consumes LLM tokens at every tick. Without countermeasures, 
 ### Monitoring
 
   - **Prompt Logging:** Every planner call is saved as JSONL in `WORKSPACE/WORKING/LOGS/prompt_log.jsonl`
-  - **Prompt Inspector:** Dashboard modal shows the latest LLM prompts (System/User/Response)
-  - **Live Tick Feed:** Dashboard shows the last 8 ticks with success rate, goal, and anomalies
-  - **Idle Indicator:** Dashboard displays "💤 IDLE: X identical plans" when the agent is idling
-
------
+  - **PromptWORKSPACE/WORKING/WHITEPAPER/CORE.md) | Runtime & Loop — the Brain |
+| [WH-IDENTITY](WORKSPACE/WORKING/WHITEPAPER/IDENTITY.md) | Emergent Identity — soul(t) |
+| [WH-WORKING](WORKSPACE/WORKING/WHITEPAPER/WORKING.md) | AAMS Body — the Body |
+| [WH-TOOLS](WORKSPACE/WORKING/WHITEPAPER/TOOLS.md) | Tool Registry, Skills & Body Interface |
+| [WH-PROJECT](WORKSPACE/WORKING/WHITEPAPER/PROJECT.md) | Project Definitions & Milestones |
+| [WH-DASHBOARD](WORKSPACE/WORKING/WHITEPAPER/DASHBOARD.md) | Dashboard Style Guide & Layout |
+| [WH-ASSISTANT](WORKSPACE/WORKING/WHITEPAPER/ASSISTANT.md) | Voice Assistant Architecture
 
 ## Integration in Mantis-OS
 
@@ -371,11 +425,13 @@ Link: [https://github.com/DEVmatrose/Mantis-OS](https://github.com/DEVmatrose/Ma
 
 | Whitepaper | Content |
 |---|---|
-| [WH-CORE](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/CORE.md) | Runtime & Loop — the Brain |
-| [WH-IDENTITY](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/IDENTITY.md) | Emergent Identity — soul(t) |
-| [WH-WORKING](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/WORKING.md) | AAMS Body — the Body |
-| [WH-TOOLS](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/TOOLS.md) | Tool Registry, Skills & Body Interface |
-| [WH-PROJECT](https://www.google.com/search?q=WORKSPACE/WORKING/WHITEPAPER/PROJECT.md) | Project Definitions & Milestones |
+| [WH-CORE](WORKSPACE/WORKING/WHITEPAPER/CORE.md) | Runtime & Loop — the Brain |
+| [WH-IDENTITY](WORKSPACE/WORKING/WHITEPAPER/IDENTITY.md) | Emergent Identity — soul(t) |
+| [WH-WORKING](WORKSPACE/WORKING/WHITEPAPER/WORKING.md) | AAMS Body — the Body |
+| [WH-TOOLS](WORKSPACE/WORKING/WHITEPAPER/TOOLS.md) | Tool Registry, Skills & Body Interface |
+| [WH-PROJECT](WORKSPACE/WORKING/WHITEPAPER/PROJECT.md) | Project Definitions & Milestones |
+| [WH-DASHBOARD](WORKSPACE/WORKING/WHITEPAPER/DASHBOARD.md) | Dashboard Style Guide & Layout |
+| [WH-ASSISTANT](WORKSPACE/WORKING/WHITEPAPER/ASSISTANT.md) | Voice Assistant Architecture |
 
 See `WORKSPACE/WORKING/WORKPAPER/` for active session work.
 
