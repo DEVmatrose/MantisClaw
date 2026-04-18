@@ -11,6 +11,7 @@ Priorität:
 Backend wird über config/default.yaml + .env konfiguriert.
 """
 
+import asyncio
 import os
 import json
 import logging
@@ -54,6 +55,9 @@ def _post_json(url: str, payload: dict, headers: dict | None = None, timeout: in
 class LLMBackend:
     """Unified interface to LLM providers. Local-first."""
 
+    # Shared lock — serializes all LLM access (Loop-Mode + Chat-Mode)
+    _lock = asyncio.Lock()
+
     def __init__(self, config: dict):
         self.backend = config.get("backend", "lmstudio")
         defaults = DEFAULTS.get(self.backend, {})
@@ -88,12 +92,13 @@ class LLMBackend:
         return {}
 
     async def complete(self, messages: list[dict], system: str | None = None) -> str:
-        if self.backend in ("lmstudio", "ollama", "openai"):
-            return self._complete_openai_compat(messages, system)
-        elif self.backend == "anthropic":
-            return self._complete_anthropic(messages, system)
-        else:
-            raise ValueError(f"Unknown LLM backend: {self.backend}")
+        async with self._lock:
+            if self.backend in ("lmstudio", "ollama", "openai"):
+                return self._complete_openai_compat(messages, system)
+            elif self.backend == "anthropic":
+                return self._complete_anthropic(messages, system)
+            else:
+                raise ValueError(f"Unknown LLM backend: {self.backend}")
 
     def _complete_openai_compat(self, messages: list[dict], system: str | None) -> str:
         """OpenAI-kompatible API — funktioniert für LM Studio, Ollama und OpenAI."""

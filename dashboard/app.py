@@ -1004,3 +1004,198 @@ async def api_voice_clear():
     """Clear voice conversation history."""
     clear_voice_history()
     return {"ok": True}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# OpenAI-Compatible API — /v1/chat/completions
+# Used by Continue.dev and other OpenAI-compatible clients.
+# Every response includes soul(t) context from identity + working state.
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/v1/models")
+async def v1_list_models():
+    """OpenAI-compatible model listing."""
+    models = list_lmstudio_models(state.lmstudio_url)
+    return {
+        "object": "list",
+        "data": [
+            {"id": m, "object": "model", "owned_by": "mantisclaw"}
+            for m in models
+        ] if models else [
+            {"id": state.model, "object": "model", "owned_by": "mantisclaw"}
+        ],
+    }
+
+
+@app.post("/v1/chat/completions")
+async def v1_chat_completions(request: Request):
+    """OpenAI-compatible chat completions with soul(t) injection.
+
+    Supports both streaming (SSE) and non-streaming responses.
+    Continue.dev connects here as a custom OpenAI provider.
+    """
+    body = await request.json()
+
+    messages = body.get("messages", [])
+    model = body.get("model", state.model)
+    stream = body.get("stream", False)
+    temperature = body.get("temperature", 0.7)
+    max_tokens = body.get("max_tokens", 4096)
+
+    # Build soul(t) system prompt
+    identity = _load_identity()
+    soul_system = _build_system_prompt(identity)
+
+    # Inject soul(t): prepend as system message if not already present
+    has_system = any(m.get("role") == "system" for m in messages)
+    full_messages = []
+    if has_system:
+        # Merge: append soul context to existing system message
+        for m in messages:
+            if m["role"] == "system":
+                full_messages.append({
+                    "role": "system",
+                    "content": f"{soul_system}\n\n--- Client Context ---\n{m['content']}",
+                })
+            else:
+                full_messages.append(m)
+    else:
+        full_messages.append({"role": "system", "content": soul_system})
+        full_messages.extend(messages)
+
+    base_url = state.lmstudio_url if state.backend == "lmstudio" else state.ollama_url
+    import time
+    import uuid
+    completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+    created = int(time.time())
+
+    if stream:
+        return StreamingResponse(
+            _v1_stream(full_messages, model, base_url, completion_id, created, temperature, max_tokens),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    else:
+        # Non-streaming: collect full response
+        loop = asyncio.get_event_loop()
+        chunks = await loop.run_in_executor(
+            None,
+            lambda: list(stream_chat(
+                messages=full_messages[1:],  # skip system
+                model=model,
+                backend=state.backend,
+                base_url=base_url,
+                system=full_messages[0]["content"],
+            ))
+        )
+        content = "".join(chunks)
+
+        # Clean thinking tags
+        if "</think>" in content:
+            content = content.split("</think>")[-1].strip()
+
+        return {
+            "id": completion_id,
+            "object": "chat.completion",
+            "created": created,
+            "model": model,
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": content},
+                "finish_reason": "stop",
+            }],
+            "usage": {
+                "prompt_tokens": -1,
+                "completion_tokens": -1,
+                "total_tokens": -1,
+            },
+        }
+
+
+async def _v1_stream(messages, model, base_url, completion_id, created, temperature, max_tokens):
+    """SSE generator for streaming chat completions in OpenAI format."""
+    loop = asyncio.get_event_loop()
+
+    try:
+        chunks_iter = await loop.run_in_executor(
+            None,
+            lambda: list(stream_chat(
+                messages=messages[1:],  # skip system
+                model=model,
+                backend=state.backend,
+                base_url=base_url,
+                system=messages[0]["content"],
+            ))
+        )
+    except Exception as e:
+        error_chunk = {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model,
+            "choices": [{
+                "index": 0,
+                "delta": {"content": f"[ERROR] {e}"},
+                "finish_reason": None,
+            }],
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
+        yield "data: [DONE]\n\n"
+        return
+
+    # First chunk with role
+    first_chunk = {
+        "id": completion_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "delta": {"role": "assistant", "content": ""},
+            "finish_reason": None,
+        }],
+    }
+    yield f"data: {json.dumps(first_chunk)}\n\n"
+
+    in_think = False
+    for chunk_text in chunks_iter:
+        # Filter out <think>...</think> blocks
+        if "<think>" in chunk_text:
+            in_think = True
+            continue
+        if "</think>" in chunk_text:
+            in_think = False
+            continue
+        if in_think:
+            continue
+
+        chunk_obj = {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model,
+            "choices": [{
+                "index": 0,
+                "delta": {"content": chunk_text},
+                "finish_reason": None,
+            }],
+        }
+        yield f"data: {json.dumps(chunk_obj)}\n\n"
+
+    # Final chunk
+    final_chunk = {
+        "id": completion_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "delta": {},
+            "finish_reason": "stop",
+        }],
+    }
+    yield f"data: {json.dumps(final_chunk)}\n\n"
+    yield "data: [DONE]\n\n"
